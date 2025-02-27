@@ -1,0 +1,17 @@
+var_name: 'u'
+pressure_level: 10
+region: 'northern_hemi'
+small_reg: 'spv'
+northern_hemi: [90,-17]
+small: [90,59]
+start_year: 1980
+end_year: 2023
+resolution: 1.40625
+reduce_to_single_dim: False
+months_to_keep: [11, 12, 1, 2, 3]
+start_season: '11-15'
+end_season: '03-31'
+days: 7
+years: 30
+var_map: 'uwnd'
+

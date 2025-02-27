@@ -1,0 +1,60 @@
+root: /mnt/beegfs/home/bommer1/WiOSTNN/Data/Network/Sweeps/Sweep_1980_10eofs/
+net_root: /mnt/beegfs/home/bommer1/WiOSTNN/Data/Network/
+strt: '1980'
+base_dir: /mnt/beegfs/home/bommer1/WiOSTNN/Data/Network/baseline/
+lr_dir: /mnt/beegfs/home/bommer1/WiOSTNN/Data/Network/lr/version
+version: '_multihead'
+transfer: 1
+devices: 1
+var_comb: {'input': ['sst', 'u', 'nae_regimes'], 'output': ['nae_regimes']}
+name: 'pre'
+saved: False
+percent_valid: 0.35
+epochs: 300 
+data:
+  regime_path: '10EOFs/'
+  pressure: 10
+  nae: 500
+  resolution: 1.40625
+  test_set_name: 'ERA5'
+  pre:
+    setname: '20CR'
+    test_start: 138
+    test_end: 145
+    train_start: 0 
+    train_end: 131
+    val_start: 131
+    val_end: 138
+  fine:
+    setname: 'ERA5'
+    test_start: 63
+    test_end: 74
+    train_start: 31 
+    train_end: 58
+    val_start: 58
+    val_end: 63
+  n_steps_in: 6
+  lag: 0
+  n_steps_out: 6
+  dataset_name1: '20CR'
+  dataset_name2: 'ERA5'
+  bs: 36
+network:
+  kernelsize: 3
+  maxpool: 2
+  norm_both: True
+  epochs: 100
+  add_attn: True
+  n_heads: 6
+  norm_both: False
+  weight_decay: 0.00005
+  hidden_dim: 64
+  encoder_num_layers: 6
+  decoder_hidden_dim: 128
+  dropout: 0.68
+  learning_rate: 0.001
+  norm: False
+  norm_bch: true
+  lrs: 0.0000008
+  swa: 0.00003
+logistic: 'version_1980_10EOFs'

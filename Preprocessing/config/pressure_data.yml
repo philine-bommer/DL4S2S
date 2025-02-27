@@ -1,0 +1,15 @@
+var_name: 'z'
+pressure_level: 500
+region: 'northern_hemi'
+northern_hemi: [90,0]
+start_year: 1980
+end_year: 2023
+resolution: 1.40625
+reduce_to_single_dim: False
+months_to_keep: [11, 12, 1, 2, 3]
+start_season: '11-15'
+end_season: '03-31'
+days: 7
+years: 30
+var_map: 'geopotential'
+

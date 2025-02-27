@@ -1,0 +1,316 @@
+import argparse
+import os
+from typing import List
+from typing import Optional
+import yaml
+import shutil
+from pathlib import Path
+from argparse import ArgumentParser
+
+import numpy as np
+from packaging import version
+# IN MODELS.PY
+# from sklearn.metrics import balanced_accuracy_score
+
+import pdb
+
+# DL packages.
+import lightning
+import lightning.pytorch as pl
+from lightning.pytorch.callbacks import StochasticWeightAveraging, EarlyStopping
+
+
+import torch
+from torch import optim, utils, nn
+
+# HP tuning package.
+import optuna
+from optuna.integration import PyTorchLightningPruningCallback
+
+# Functions from py-files.
+from loss import FocalLossAdaptive
+from dataset.datasets_wrapped import TransferData
+from build_model import build_finetune, build_architecture_sweep, build_encoder
+from utils_data import cls_weights
+from utils import statics_from_config
+from utils_evaluation import evaluate_accuracy
+from model import mae, ViT, StNN_static
+
+def objective_vit(trial: optuna.trial.Trial,
+              ) -> float:
+    
+
+    
+    parser = ArgumentParser()
+    parser.add_argument("--config", type=str, default='')
+    parser.add_argument("--network", type=str, default='conv')
+    parser.add_argument("--ntrials", type=int, default=100)
+    args = parser.parse_args()
+
+    cfile = args.config
+    # Load config and settings.
+    cfd = os.path.dirname(os.path.abspath(__file__))
+    config = yaml.load(open(f'{cfd}/config/loop_config{cfile}.yaml'), Loader=yaml.FullLoader)
+
+    strt_yr = config.get('strt','')
+    trial_num = config.get('version', '')
+    norm_opt = config.get('norm_opt','')
+    name_var = config.get('tropics','')
+
+    log_dir = config['net_root'] + f'Sweeps/ViT/Sweep_{strt_yr}{trial_num}_{norm_opt}{name_var}/'
+
+    # Initialize optimization range.
+    swa =  trial.suggest_float("SWA",1e-5, 1e-1,log=True)
+    learning_rate =  trial.suggest_float("learning_rate",1e-4, 1e-1,log=True)
+    batch_size = trial.suggest_categorical("batch_size", [36, 72])
+    decoder_hidden_dim = trial.suggest_categorical("decoder_hidden_dim", [64, 128, 256])
+    dropout = trial.suggest_float("dropout", 0.1,0.9)
+    weight_decay = trial.suggest_float("weight_decay",1e-7, 0.5,log=True)
+    gamma = {}
+    gamma['val'] = 3
+    gamma['nurmeric'] = 1
+    gc_pre = trial.suggest_float("gradient_clip_pre", 0.,0.9)
+    gc_fine = trial.suggest_float("gradient_clip_fine", 0.,0.9)
+
+
+    #Initialize static variables.
+    setting_training = config['setting_training']
+
+    device = torch.device("cuda")
+    optimizer =  optim.Adam
+    if 'calibrated' in norm_opt:
+        criterion = FocalLossAdaptive(gamma = gamma['val'], numerical=gamma['nurmeric'], device=device)
+    else:
+        criterion = nn.CrossEntropyLoss
+    var_comb = config['var_comb']
+
+    data_info, seasons = statics_from_config(config)
+    if "fine" in setting_training:
+        seasons =  {'train':{config['data']['dataset_name2']:list(range(config['data']['fine']['train_start'], config['data']['fine']['train_end']))},
+            'val':{config['data']['dataset_name2']:list(range(config['data']['fine']['val_start'], config['data']['fine']['val_end']))},
+            'test':{config['data']['dataset_name2']:list(range(config['data']['fine']['test_start'], config['data']['fine']['test_end']))}}
+
+
+    lightning.lite.utilities.seed.seed_everything(42)
+
+    # Create data loader.
+    params = {'seasons': seasons, 'test_set_name':config['data'][config['name']]['setname']}
+    if "fine" in setting_training:
+        Fine_data = TransferData(config['data']['dataset_name2'], 
+                                    var_comb, data_info, batch_size, **params)
+
+        Fine_data.train_dataloader()
+        Fine_data.val_dataloader()
+        Fine_data.test_dataloader()
+        test_loader = Fine_data.test_dataloader()
+
+        
+        data = Fine_data.access_dataset()
+
+        cls_wt = cls_weights(data, 'balanced')
+    else:
+        Pre_data = TransferData(config['data']['dataset_name1'], 
+                                    var_comb, data_info, batch_size, **params)
+        Fine_data = TransferData(config['data']['dataset_name2'], 
+                                    var_comb, data_info, batch_size, **params)
+        Pre_data.train_dataloader()
+        Pre_data.val_dataloader()
+        Fine_data.train_dataloader()
+        Fine_data.val_dataloader()
+        Fine_data.test_dataloader()
+        test_loader = Pre_data.test_dataloader()
+        
+        data = Pre_data.access_dataset()
+
+        cls_wt = cls_weights(data, 'balanced')
+    frame_size = [int(x) for x in data['val'][0][0][0].shape][-2:]
+    input_dim = [int(x) for x in data['val'][0][0][0].shape][1]
+    # remember for reproducibility and analysis
+    data_info['var_comb'] = var_comb
+
+    # Build encoder.
+    Mae_sst, Mae_u = build_encoder(config)
+    Mae_sst = Mae_sst.encoder
+    Mae_u = Mae_u.encoder
+    enc_path = config['net_root'] + f'MAE/version_{strt_yr}{trial_num}_{norm_opt}/individual_static/'
+    config_enc = yaml.load(open(f'{enc_path}config_u.yaml'), Loader=yaml.FullLoader)
+    
+
+    # Create model.
+    architecture = StNN_static.spatiotemporal_Neural_Network
+
+    early_stop_callback = EarlyStopping(monitor="train_acc", 
+                                        min_delta=0.00, patience=3, verbose=False, mode="max")
+
+     
+    model_params = dict(
+        encoder_u = Mae_u,
+        encoder_sst = Mae_sst,
+        enc_out_shape = [1,config_enc['vit']['dim']],#data['val'][0][0][1].shape[-1]],#config_enc['enc_shape'],
+        in_time_lag=config['data']['n_steps_in'],
+        out_time_lag=config['data']['n_steps_out'],
+        out_dim=data['val'][0][0][1].shape[-1],
+        output_probabilities = True,
+        learning_rate =  learning_rate,
+        decoder_hidden_dim = decoder_hidden_dim,
+        dropout = dropout,
+        weight_decay = weight_decay,
+        norm_both = trial.suggest_categorical("norm_both", [True, False]),
+        norm = trial.suggest_categorical("norm", [True, False]),
+        norm_bch = trial.suggest_categorical("norm_bch", [True, False]),
+        clbrt = config['network'].get('clbrt',0),
+        add_attn = config['network'].get('add_attn',False),
+        n_heads = config['network'].get('n_heads',0),
+        bs = batch_size,
+        gamma = gamma
+    )
+
+
+    if "fine" in setting_training:
+        # Run Training.
+        trainer_fine = pl.Trainer(
+                    logger=True,
+                    gradient_clip_val = gc_fine,
+                    log_every_n_steps = 5,
+                    check_val_every_n_epoch=10,
+                    default_root_dir= log_dir, 
+                    deterministic=True,
+                    enable_checkpointing=False,
+                    max_epochs=config['epochs'],
+                    accelerator="gpu" ,
+                    devices=config['devices'],
+                    # callbacks=[PyTorchLightningPruningCallback(trial, monitor="train_acc"), 
+                    #            StochasticWeightAveraging(swa_lrs=swa), early_stop_callback],
+                    callbacks=[StochasticWeightAveraging(swa_lrs=swa), early_stop_callback],
+                    )
+    else:
+        trainer_pre = pl.Trainer(
+            logger=True,
+            gradient_clip_val = gc_pre,
+            check_val_every_n_epoch=3,
+            log_every_n_steps = 15,
+            default_root_dir= log_dir, 
+            deterministic=True,
+            limit_val_batches=config['percent_valid'],
+            enable_checkpointing=False,
+            max_epochs=config['epochs'],
+            accelerator="auto" ,
+            devices=config['devices'],
+            callbacks=[PyTorchLightningPruningCallback(trial, monitor="val_acc"), 
+                    StochasticWeightAveraging(swa_lrs=swa), early_stop_callback],
+        )
+
+        trainer_fine = pl.Trainer(
+            logger=True,
+            gradient_clip_val = gc_fine,
+            log_every_n_steps = 5,
+            check_val_every_n_epoch=10,
+            default_root_dir= log_dir, 
+            deterministic=True,
+            enable_checkpointing=False,
+            max_epochs=config['epochs'],
+            accelerator="gpu" ,
+            devices=config['devices'],
+            # callbacks=[PyTorchLightningPruningCallback(trial, monitor="train_acc"), 
+            #            StochasticWeightAveraging(swa_lrs=swa), early_stop_callback],
+            callbacks=[StochasticWeightAveraging(swa_lrs=swa), early_stop_callback],)
+        
+    model, exp_info = build_architecture_sweep(name=f'exp_transfer_doublenorm_{architecture.__name__}_{"-".join(var_comb["input"])}',
+                    architecture = architecture,
+                    model_params = model_params,
+                    data = data_info,
+                    criterion = criterion,
+                    optimizer = optimizer,
+                    epochs = config['network']['epochs'],
+                    class_weight = cls_wt,
+                    batch_size=config['data']['bs'],
+                    trainer = trainer_fine,
+                    n_instances=1)
+
+    if "fine" in setting_training:
+        model_params['swa'] = swa
+        model_params['criterion'] = criterion.__name__
+        model_params['optimizer'] = optimizer.__name__
+        model_params['lr_fine'] = learning_rate
+        model_params['swa'] = swa
+        model_params['bs'] = batch_size
+        model_params['grad_clip_pre'] = gc_pre
+        model_params['grad_clip_fine'] = gc_fine
+        model_params['encoder_u'] = []
+        model_params['encoder_sst'] = []
+
+        trainer_fine.logger.log_hyperparams(model_params) #only if trainer logger = False
+
+        trainer_fine.fit(model, Fine_data)
+
+        trainer_fine.save_checkpoint(f"{trainer_fine.logger.log_dir}/best_model.ckpt")
+        trainer_fine.test(dataloaders=Fine_data.test_dataloader(), ckpt_path=f"{trainer_fine.logger.log_dir}/best_model.ckpt")
+
+        val_results = trainer_fine.validate(dataloaders=Fine_data.val_dataloader(), ckpt_path=f"{trainer_fine.logger.log_dir}/best_model.ckpt")
+
+        val_ac, val_acc_ts = evaluate_accuracy(model, trainer_fine, Fine_data.val_dataloader(),
+                                     config, data_info, var_comb, seasons, 'val')
+    
+    
+        trainer_fine.test(dataloaders=Fine_data.test_dataloader(), ckpt_path=f"{trainer_fine.logger.log_dir}/best_model.ckpt")
+
+        fine_acc, fine_acc_ts = evaluate_accuracy(model, trainer_fine, Fine_data.test_dataloader(),config, data_info, var_comb, seasons, 'test')
+
+        results = {'test_fine': float(fine_acc), 'val_fine': float(val_ac),'val_ece': val_results[0]['val_ece'], 
+                'fine_ts_acc': {'ts_acc':fine_acc_ts, 'mean':float(np.mean(fine_acc_ts))}}
+
+        with open(os.path.join(Path(trainer_fine.logger.log_dir), "accuracies.yml"), 'w') as outfile:
+            yaml.dump(results, outfile, default_flow_style=False)
+
+    else:
+
+        kwgrs_fine = {'learning_rate': trial.suggest_float("lrs",1e-7, 1e-1,log=True), 'criterion': criterion,
+                    'encoder_u': Mae_u, 'encoder_sst': Mae_sst}
+        model_params['criterion'] = criterion.__name__
+        model_params['optimizer'] = optimizer.__name__
+        model_params['lr_fine'] = kwgrs_fine['learning_rate']
+        model_params['swa'] = swa
+        model_params['bs'] = batch_size
+        model_params['grad_clip_pre'] = gc_pre
+        model_params['grad_clip_fine'] = gc_fine
+        model_params['encoder_u'] = []
+        model_params['encoder_sst'] = []
+
+        trainer_pre.logger.log_hyperparams(model_params) #only if trainer logger = False
+        trainer_pre.fit(model, Pre_data)
+
+        trainer_pre.save_checkpoint(f"{trainer_pre.logger.log_dir}/best_pretrained_model.ckpt")
+        acc = trainer_pre.test(dataloaders=test_loader, ckpt_path=f"{trainer_pre.logger.log_dir}/best_pretrained_model.ckpt")
+
+
+        ## Fine Tuning ##
+        fine_model = build_finetune(Fine_data, architecture, trainer_pre, **kwgrs_fine)
+        trainer_fine.fit(fine_model, Fine_data)
+        trainer_fine.save_checkpoint(f"{trainer_pre.logger.log_dir}/best_finetuned_model.ckpt")
+
+        val_results = trainer_fine.validate(dataloaders=Fine_data.val_dataloader(), ckpt_path=f"{trainer_pre.logger.log_dir}/best_finetuned_model.ckpt")
+
+        val_acc, val_acc_ts = evaluate_accuracy(fine_model, trainer_fine, Fine_data.val_dataloader(),
+                                    config, data_info, var_comb, seasons, 'val')
+        val_ac = np.mean(val_acc_ts)
+    
+        
+        trainer_fine.test(dataloaders=Fine_data.test_dataloader(), ckpt_path=f"{trainer_pre.logger.log_dir}/best_finetuned_model.ckpt")
+        
+
+        fine_acc, fine_acc_ts = evaluate_accuracy(fine_model, trainer_fine, Fine_data.test_dataloader(),config, data_info, var_comb, seasons, 'test')
+
+        results = {'test_fine': float(fine_acc), 'val_fine': float(val_ac), 'test_pre': acc, 'val_ece': val_results[0]['val_ece'], 
+                'fine_ts_acc': {'ts_acc':fine_acc_ts, 'mean':float(np.mean(fine_acc_ts))}}
+
+        with open(os.path.join(Path(trainer_pre.logger.log_dir), "accuracies.yml"), 'w') as outfile:
+            yaml.dump(results, outfile, default_flow_style=False)
+
+
+        try:
+            shutil.rmtree(trainer_fine.logger.log_dir)
+        except Exception as e:
+            print(f" Error deleting logger path fine tuning: {e}")
+
+    # return val_ac
+    return (float(val_ac) - val_results[0]['val_ece'])
