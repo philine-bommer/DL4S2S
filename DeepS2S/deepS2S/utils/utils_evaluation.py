@@ -16,7 +16,7 @@ import pandas as pd
 from datetime import datetime
 import matplotlib.pyplot as plt
 
-from dataset.datasets_wrapped import WeatherDataset
+from DeepS2S.deepS2S.dataset.datasets_regimes import WeatherDataset
 
 import utils
 

@@ -93,7 +93,7 @@ if __name__ == '__main__':
 
 
     pl.seed_everything(1)
-
+    acc_ts = []
     for i in range(num_mods):
     
         train_indices, val_indices, test_indices = get_random_seasons(config['data']['fine']['test_end'], [0.8,0.2])

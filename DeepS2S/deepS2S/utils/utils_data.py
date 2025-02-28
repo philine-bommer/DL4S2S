@@ -4,34 +4,13 @@ import shutil
 from datetime import datetime
 import pdb
 
-import torch
 import numpy as np
 import pandas as pd
 from sklearn.utils import class_weight
 import matplotlib.pyplot as plt
 from utils import statics_from_config
-from dataset.datasets_wrapped import TransferData, WeatherDataset
+from dataset.datasets import TransferData, WeatherDataset
 
-def _get_cv_data_split(full_data, i):
-    k_fold = full_data['config']['k_fold']
-
-    n_samples = len(full_data['train'])
-    indicies = np.arange(n_samples)
-    np.random.seed(42)
-    np.random.shuffle(indicies)
-    indicies = np.tile(indicies, 2)
-    shift = n_valid = n_samples // k_fold
-    n_train = n_samples - n_valid
-
-    init = i*shift
-    train_indicies = indicies[init:init+n_train]
-    valid_indicies = indicies[init+n_train:init+n_train+n_valid]
-
-    data = full_data.copy()
-    data['train'] = torch.utils.data.dataset.Subset(full_data['train'], train_indicies)
-    data['valid'] = torch.utils.data.dataset.Subset(full_data['train'], valid_indicies)
-
-    return data
 
 def cls_weights(data,
                 ctype = 'balanced'):
@@ -86,34 +65,6 @@ def load_data(config):
     )
     
     return test_loader, data_set, cls_wt, test_set, infos
-
-def extract_data_arrays(data_set, pred, pred_baseline):
-    dates = []
-    daytimes = []
-    targets = []
-    persistance = []
-    i = 0
-
-    for input, output, weeks, days in data_set:
-        targets.append(np.array(output).squeeze())
-        dates.append(np.array(weeks).squeeze())
-        daytimes.append(np.array(days).squeeze())
-
-        persistance.append(np.repeat(np.argmax(input[1].numpy()[-1]), 6).T)
-        i += 1
-        
-    predictions = []
-    predictions_baseline = []
-    for i in range(len(pred)):
-        predictions.append(pred[i])
-        predictions_baseline.append(pred_baseline[i])
-    pdb.set_trace()
-    for var in ['predictions', 'predictions_baseline']:
-        locals()[var] = np.concatenate(locals()[var])
-    for var in ['dates', 'daytimes', 'targets', 'persistance']:
-        locals()[var] = np.concatenate(locals()[var]).reshape((predictions.shape[0],predictions.shape[1]))
-    
-    return dates, daytimes, targets, persistance, predictions, predictions_baseline
 
 def generate_clim_pred(clim, dates):
 

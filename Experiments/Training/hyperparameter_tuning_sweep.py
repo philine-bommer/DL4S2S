@@ -7,9 +7,8 @@ from pathlib import Path
 import lightning.pytorch as pl
 import optuna
 
-# from tuning_objective_convLSTM import objective_convLSTM
-from tuning_objective_vit import objective_vit
-# export 'PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512'
+from Experiments.Training.hyperparameter_tuning_objective import objective_vit
+
 
 if __name__ == "__main__":
 
@@ -31,12 +30,9 @@ if __name__ == "__main__":
     ntr = args.ntrials
     # Load config and settings.
     cfd = os.path.dirname(os.path.abspath(__file__))
-    # if 'conv' in ntype:
-    #     config = yaml.load(open(f'{cfd}/config/convlstm_config{cfile}.yaml'), Loader=yaml.FullLoader)
-    #     arch = ''
-    # else:
+
     config = yaml.load(open(f'{cfd}/config/loop_config{cfile}.yaml'), Loader=yaml.FullLoader)
-    arch = 'ViT/'
+    arch = 'ViT-LSTM/'
 
     strt_yr = config.get('strt','')
     trial_num = config.get('version', '')
@@ -49,11 +45,8 @@ if __name__ == "__main__":
     pruner = optuna.pruners.MedianPruner() if args.pruning else optuna.pruners.NopPruner()
 
     study = optuna.create_study(direction="maximize", pruner=pruner)
-    # study = optuna.create_study(direction="minimize", pruner=pruner)
-    # if 'conv' in ntype:
-    #     study.optimize(objective_convLSTM, n_trials=ntr) #n_jobs=3)
-    # else:
-    study.optimize(objective_vit, n_trials=ntr) #n_jobs=3)
+
+    study.optimize(objective_vit, n_trials=ntr) 
     print("Number of finished trials: {}".format(len(study.trials)))
 
     print("Best trial:")
@@ -70,7 +63,7 @@ if __name__ == "__main__":
 
 
     num = trial.number
-    # results = {'folder': f"version_{num}", 'val_acc': trial.value, 'Params':trial.params}
+
     results = {'folder': f"version_{num}", 'val_acc - val_ece': trial.value, 'Params':trial.params}
     with open(results_directory + '/results.yml', 'w') as outfile:
         yaml.dump(results, outfile, default_flow_style=False)
@@ -81,19 +74,19 @@ if __name__ == "__main__":
 
 
     # Plot Visulizations.
-    plot_dir = results_directory + "/Plots/"   
-    os.makedirs(Path(plot_dir), exist_ok = True) 
+    # plot_dir = results_directory + "/Plots/"   
+    # os.makedirs(Path(plot_dir), exist_ok = True) 
         
-    fig1 = optuna.visualization.plot_intermediate_values(study)
-    fig1.write_image(f"{plot_dir}/intermediate_results.png") 
+    # fig1 = optuna.visualization.plot_intermediate_values(study)
+    # fig1.write_image(f"{plot_dir}/intermediate_results.png") 
 
-    fig2 = optuna.visualization.plot_optimization_history(study)
-    fig2.write_image(f"{plot_dir}/optimization_history.png")
+    # fig2 = optuna.visualization.plot_optimization_history(study)
+    # fig2.write_image(f"{plot_dir}/optimization_history.png")
 
 
-    fig3 = optuna.visualization.plot_parallel_coordinate(study, params=param_list)
-    fig3.write_image(f"{plot_dir}/parallel_coordinate.png")
+    # fig3 = optuna.visualization.plot_parallel_coordinate(study, params=param_list)
+    # fig3.write_image(f"{plot_dir}/parallel_coordinate.png")
 
-    fig4 = optuna.visualization.plot_param_importances(study)
-    fig4.write_image(f"{plot_dir}/parameter_importance.png")
+    # fig4 = optuna.visualization.plot_param_importances(study)
+    # fig4.write_image(f"{plot_dir}/parameter_importance.png")
 

@@ -60,10 +60,8 @@ def main(args):
 
     time_coords = ds.time.values[int(args.ndays/2):-int(args.ndays/2)]
     # Calculate rolling average
-    # avg = ds.rolling(**{args.timedim:args.ndays, "center":True}).mean().dropna("time")
     avg = ds.rolling(**{args.timedim:args.ndays, "center":True}).mean(skipna=True)
-    # pdb.set_trace()
-    # avg = ds.rolling(**{args.timedim:args.ndays,}).mean()
+   
     avg = avg.sel(time=slice(avg.time.values[int(args.ndays/2)], avg.time.values[-int(args.ndays/2)-1])).assign_coords(time=time_coords)
 
     
@@ -76,9 +74,6 @@ def main(args):
     avg = avg.assign(phase = phase)
     avg = avg.assign(amplitude = amplitude)
     avg = avg.assign(phase_number = phase_number)
-    # avg["phase"].data = phase.data
-    # avg["amplitude"].data = amplitude.data
-    # avg["phase_number"].data = phase_number.data
 
     
     avg.to_netcdf(args.outfile)

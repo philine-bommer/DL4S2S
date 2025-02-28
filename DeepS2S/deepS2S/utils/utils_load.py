@@ -15,8 +15,8 @@ import lightning.pytorch as pl
 import model.StNN_static as stnn
 
 from utils import statics_from_config
-from dataset.datasets_wrapped import TransferData, WeatherDataset
-from build_model import load_multi_model
+from DeepS2S.deepS2S.dataset.datasets_regimes import TransferData, WeatherDataset
+from DeepS2S.deepS2S.utils.utils_build import load_multi_model
 from utils_data import generate_clim_pred, load_data
 from utils_model import test_model_and_data, best_model_folder
 import utils_evaluation as eval

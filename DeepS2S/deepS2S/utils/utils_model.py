@@ -19,11 +19,11 @@ import lightning.pytorch as pl
 from model import mae, ViT
 import model.StNN_static as m
 # import model.StNN_static as stnn
-from build_model import build_encoder
+from DeepS2S.deepS2S.utils.utils_build import build_encoder
 from utils_data import cls_weights
 from utils_evaluation import evaluate_accuracy
 from utils import statics_from_config
-from dataset.datasets_wrapped import TransferData, WeatherDataset
+from DeepS2S.deepS2S.dataset.datasets_regimes import TransferData, WeatherDataset
 
 
 def load_single_model(config, hp_dir, cf_dir, architecture):
@@ -66,16 +66,6 @@ def load_single_model(config, hp_dir, cf_dir, architecture):
                                                     strict=False)
     model.configure_optimizers()
     model.configure_loss()
-
-    # architecture = getattr(stnn, name)
-    # mae_sst, mae_u = build_encoder(config)
-    # model = architecture.load_from_checkpoint(f"{hp_dir}/best_finetuned_model.ckpt", 
-    #                                                 encoder_u = mae_u,
-    #                                                 encoder_sst = mae_sst, )
-                                                    
-    # model.configure_optimizers()
-    # model.configure_loss()
-    
     
     return model, result_collection, hp_dir, architecture
 
@@ -84,14 +74,8 @@ def get_data(config, seasons, var_comb, data_info):
     # Create data loader.
     params = {'seasons': seasons, 'test_set_name':config['data'][config['name']]['setname']}
 
-    if 'Hindcast' in var_comb['input']:
-        from dataset.datasets_hindcast import TransferData, WeatherDataset
-        Fine_data = TransferData(config['data']['dataset_name2'], 
-                                var_comb, data_info, config['data']['bs'], **params)
-    else:
-        from dataset.datasets_wrapped import TransferData, WeatherDataset
-        Fine_data = TransferData(config['data']['dataset_name2'], 
-                                var_comb, data_info, config['data']['bs'], **params)
+    Fine_data = TransferData(config['data']['dataset_name2'], 
+                            var_comb, data_info, config['data']['bs'], **params)
 
 
     Fine_data.train_dataloader()
@@ -127,15 +111,7 @@ def test_model(config, pat, architecture, dev):
     var_comb = config['var_comb']
 
     data_info, seasons = statics_from_config(config)
-        
-    # # Create data loader.
-    # params = {'seasons': seasons, 'test_set_name':config['data'][config['name']]['setname']}
 
-    # Fine_data = TransferData(config['data']['dataset_name2'], 
-    #                             var_comb, data_info, config['data']['bs'], **params)
-    # Fine_data.train_dataloader()
-    # val_loader = Fine_data.val_dataloader()
-    # test_loader = Fine_data.test_dataloader()
 
     test_loader, val_loader, _, _, _, _ = get_data(config, seasons, var_comb, data_info)
 

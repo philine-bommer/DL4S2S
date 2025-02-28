@@ -37,7 +37,7 @@ calc = args.calculate
 # Load config and settings.
 cfd = os.path.dirname(os.path.abspath(__file__))
 config = yaml.load(open(f'{cfd}/config/loop_config{cfile}.yaml'), Loader=yaml.FullLoader)
-arch = 'ViT/'
+arch = 'ViT-LSTM/'
 
 if 'Sweep' in config['root']:
     sweep = True

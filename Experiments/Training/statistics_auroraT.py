@@ -15,7 +15,7 @@ import numpy as np # USE EITHER NUMPY OR TORCH
 
 from model.temporalViT import TemporalTransformerModel
 from dataset.dataset_embeddings import EmbeddingDataset
-from train.train_ViT import compute_class_weights, training, accuracy_per_timestep
+from train.utils_train import compute_class_weights, training, accuracy_per_timestep
 
 if __name__ == '__main__':
 
@@ -131,7 +131,7 @@ if __name__ == '__main__':
         fine_acc_ts = accuracy_per_timestep(model, test_loader, num_classes, device)
         acc_ts.append(fine_acc_ts)
 
-    pdb.set_trace()
+
     accuracy_ts = np.concatenate(acc_ts).reshape(num_mods,6)
 
     print(f'Accuracy mean: {accuracy_ts.mean(axis=0)}, std: {accuracy_ts.std(axis=0)}')
