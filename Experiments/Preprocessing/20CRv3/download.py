@@ -1,4 +1,5 @@
 from ftplib import FTP
+from argparse import ArgumentParser
 from pathlib import Path
 import xarray as xr
 
@@ -6,7 +7,12 @@ ftp = FTP('ftp2.psl.noaa.gov')
 ftp.login('anonymous', 'paulboehnke95@gmail.com')
 
 # set variable downloaded from the 20th century Reanalysis Data
-vrbl = 'olr'
+parser = ArgumentParser()
+
+parser.add_argument("--vrbl", type=str, default='pressure')
+args = parser.parse_args()
+
+vrbl = args.vrbl
 
 
 # Download files 1980 - 2015.
@@ -26,7 +32,7 @@ ftp.cwd(directory)
 filenames = ftp.nlst() # get filenames within the directory
 filenames = [filename for filename in filenames if filename.endswith('.nc') and filename.startswith(var)]
 
-out_path = Path(f'./raw/{var}')
+out_path = Path(f'../Data/20CRv3/raw/{var}')
 if vrbl == 'olr':
     out_path = Path(f'./raw/{vrbl}')
 out_path.mkdir(parents=True, exist_ok=True)
@@ -69,7 +75,7 @@ filenames = ftp.nlst() # get filenames within the directory
 filenames = [filename for filename in filenames if filename.endswith('.nc') and filename.startswith(var)]
 
 # check out path.
-out_path = Path(f'./raw/{var}')
+out_path = Path(f'../Data/20CRv3/raw/{var}')
 if vrbl == 'olr':
     out_path = Path(f'./raw/{vrbl}')
 out_path.mkdir(parents=True, exist_ok=True)

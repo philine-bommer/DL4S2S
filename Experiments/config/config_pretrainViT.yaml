@@ -3,18 +3,18 @@ net_root: /mnt/beegfs/home/bommer1/WiOSTNN/Data/Network/
 strt: '1980'
 base_dir: /mnt/beegfs/home/bommer1/WiOSTNN/Data/Network/baseline/
 lr_dir: /mnt/beegfs/home/bommer1/WiOSTNN/Data/Network/lr/version
-version: '_10eofs'
+version: ''
 transfer: 1
 devices: 1
 norm_opt: 'calibrated'
 # var_comb: [{'input': ['sst'], 'output': ['nae_regimes']},{'input': ['u'], 'output': ['nae_regimes']}]
-var_comb: [{'input': ['sst'], 'output': ['nae_regimes']},{'input': ['u'], 'output': ['nae_regimes']},{'input': ['olr'], 'output': ['nae_regimes']}]
+var_comb: [{'input': ['u'], 'output': ['nae_regimes']},{'input': ['olr'], 'output': ['nae_regimes']}]
 name: 'pre'
 percent_valid: 0.35
 num_m: 100
 epochs: 200 
 data:
-  regime_path: '10EOFs/'
+  regime_path: ''
   pressure: 10
   nae: 500
   resolution: 1.40625
@@ -29,12 +29,12 @@ data:
     val_end: 138
   fine:
     setname: 'ERA5'
-    test_start: 63
-    test_end: 74
-    train_start: 31 
-    train_end: 58
-    val_start: 58
-    val_end: 63
+    test_start: 33
+    test_end: 43
+    train_start: 0 
+    train_end: 28
+    val_start: 28
+    val_end: 33
   n_steps_in: 6
   lag: 0
   n_steps_out: 6

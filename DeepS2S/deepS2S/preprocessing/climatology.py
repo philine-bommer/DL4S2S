@@ -214,66 +214,7 @@ def combine_arrays(data: list, dim: np.array,)-> list:
                 data_dict[f'{t}']= dst
             else:
                 data_dict[f'{t}'] = xr.concat((data_dict[f'{t}'],dst), dim = 'latitude')
-                # data_dict[f'{t}']['latitude'] = data[0][0].assign_coords(latitude = dim)
 
 
     return list(data_dict.values())
 
-# def climatology_and_anomalies_perLat(data: xr.DataArray,
-#                               years: float,
-#                               path: str,
-#                               avg: str = 'month'
-#                               ) -> xr.DataArray:
-
-        
-
-#         anomalies = copy.deepcopy(data)
-#         last = data.isel(time=-1)
-#         first = data.isel(time=0)
-#         yrs = np.arange(first.time.dt.year.values, last.time.dt.year.values+1)
-
-#         beg = '01-01'
-#         end = '12-31'
-
-#         for i in range(len(yrs)//years +1):
-#             if ((i+1)*years) > len(yrs):
-#                 start_dt = np.datetime64(f'{yrs[i*years]}-{beg}')
-#                 end_dt = last.time.values
-#             elif i == 0:
-#                 start_dt = first.time.values
-#                 end_dt = np.datetime64(f'{yrs[(i+1)*years-1]}-{end}') 
-#             else: 
-#                 start_dt = np.datetime64(f'{yrs[i*years]}-{beg}')
-#                 end_dt = np.datetime64(f'{yrs[(i+1)*years-1]}-{end}') 
-#             for l, lats in enumerate(data['latitude'].values):
-                
-#                 dst = data.sel({'time':slice(start_dt,end_dt),'latitude': lats}).astype('float32')
-#                 if i == 0:
-#                     # for first iteration we consider same period for climatology and anomalies
-#                     if 'dai' == avg:
-#                         clim_l =  dst.groupby('time.dayofyear').mean('time')
-#                         anomalies.loc[{'time':slice(start_dt,end_dt),'latitude': lats}] = dst.groupby('time.dayofyear') - clim_l
-#                     else:
-#                         clim_l=  dst.groupby('time.month').mean('time')
-#                         anomalies.loc[{'time':slice(start_dt,end_dt),'latitude': lats}] = dst.groupby('time.month') - clim_l
-#                 else:
-#                     # for the rest of the iterations we consider the previous period for anomalies and the current period for climatology
-#                     if 'dai' == avg:
-#                         anomalies.loc[{'time':slice(start_dt,end_dt),'latitude': lats}] = dst.groupby('time.dayofyear') - clim_prev.loc[{'latitude': lats}]
-#                         clim_l =  dst.groupby('time.dayofyear').mean('time')
-#                     else:
-#                         anomalies.loc[{'time':slice(start_dt,end_dt),'latitude': lats}] = dst.groupby('time.month') - clim_prev.loc[{'latitude': lats}]
-#                         clim_l =  dst.groupby('time.month').mean('time')
-#                 if l == 0:
-#                     clim = clim_l
-#                 else: 
-#                     clim = xr.concat((clim,clim_l), dim ='latitude')
-
-#             clim_prev = clim
-#             if ((i+1)*years) > len(yrs):
-#                 clim.to_netcdf(path + f'{yrs[i*years]}_{last.time.dt.year.values}.nc', engine ="netcdf4")
-#             else:
-#                 clim.to_netcdf(path + f'{yrs[i*years]}_{yrs[(i+1)*years-1]}.nc', engine ="netcdf4")
-#             del clim
-
-#         return anomalies
