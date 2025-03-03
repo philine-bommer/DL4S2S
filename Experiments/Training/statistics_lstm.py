@@ -14,13 +14,14 @@ import lightning
 import lightning.pytorch as pl
 from lightning.pytorch.callbacks import StochasticWeightAveraging, EarlyStopping
 
-from model import mae, ViT, StNN_static
-from loss import FocalLossAdaptive
-from dataset.datasets_wrapped import TransferData
-from build_model import build_architecture, build_finetune, build_encoder
-from utils_data import cls_weights
-from utils_evaluation import evaluate_accuracy, numpy_predict
-from utils import statics_from_config, get_params_from_best_model
+
+from deepS2S.model import ViTLSTM
+from deepS2S.model.loss import FocalLossAdaptive
+from deepS2S.dataset.datasets_wrapped import TransferData
+from deepS2S.utils.utils_build import build_architecture, build_encoder
+from deepS2S.utils.utils_data import cls_weights
+from deepS2S.utils.utils_evaluation import evaluate_accuracy, numpy_predict
+from deepS2S.utils.utils import statics_from_config, get_params_from_best_model
 
 if __name__ == '__main__':
 
@@ -38,8 +39,12 @@ if __name__ == '__main__':
     cfile = args.config
 
     # Load config and settings.
-    cfd = os.path.dirname(os.path.abspath(__file__))
-    config = yaml.load(open(f'{cfd}/config/convlstm_config{cfile}.yaml'), Loader=yaml.FullLoader)
+    exd = os.path.dirname(os.path.abspath(__file__))
+    cfd = exd.parent.absolute()
+    config = yaml.load(open(f'{cfd}/config/config{cfile}.yaml'), Loader=yaml.FullLoader)
+
+    config['net_root'] = str(cfd.parent.absolute()) + f'/Data/Network/'
+    config['root'] = str(cfd.parent.absolute()) + f'/Data/Network/Sweeps/'
 
     num_mods = args.ntrials
 
@@ -48,24 +53,20 @@ if __name__ == '__main__':
     # Set up models args.
     ntype = args.network
     # Set up models args
-    net = 'STNN'
+    net = 'ViT-LSTM'
+    config['network']['mode'] = 'base'
     setting_training = "fine"
 
 
     config['root'] = config['root'] + f"{ntype}/"
     config['arch'] = ''
-    architecture = StNN_static.spatiotemporal_Neural_Network
+    architecture = ViTLSTM.ViT_LSTM
     conv_params = get_params_from_best_model(config, 'spatiotemporal')
 
 
     var_comb = config['var_comb']
 
-    data_info, _ = statics_from_config(config)
-
-
-    seasons =  {'train':{config['data']['dataset_name2']:list(range(config['data']['fine']['train_start'], config['data']['fine']['train_end']))},
-        'val':{config['data']['dataset_name2']:list(range(config['data']['fine']['val_start'], config['data']['fine']['val_end']))},
-        'test':{config['data']['dataset_name2']:list(range(config['data']['fine']['test_start'], config['data']['fine']['test_end']))}}
+    data_info, seasons = statics_from_config(config)
 
 
     # Create data loader.
@@ -90,18 +91,15 @@ if __name__ == '__main__':
     # remember for reproducibility and analysis
     data_info['var_comb'] = var_comb
 
-    if config['network'].get('mode', 'run') == 'base':
-        log_dir = config['net_root'] + 'Statistics/LSTM/'         
-        print(f'log: {log_dir}')
-    else:
-        log_dir = config['net_root'] + 'Statistics/ViT/' 
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
+    log_dir = config['net_root'] + 'Statistics/LSTM/'         
+    print(f'log: {log_dir}')
+
 
     strt_yr = config.get('strt','')
     trial_num = config.get('version', '')
     norm_opt = config.get('norm_opt','')
     name_var = config.get('tropics','')
+    vit_dir = f'version_{strt_yr}{trial_num}_{norm_opt}{name_var}'
     log_dirs = log_dir + f'version_{strt_yr}{trial_num}_{norm_opt}{name_var}/'
     if not os.path.exists(log_dirs):
         os.makedirs(log_dirs)
@@ -133,7 +131,7 @@ if __name__ == '__main__':
     model_params = dict(
         encoder_u = Mae_u.encoder,
         encoder_sst = Mae_tropics.encoder,
-        enc_out_shape =  [1,512],#config_enc_u['enc_shape'],
+        enc_out_shape =  [1,config_enc_u['vit']['dim']],
         in_time_lag=config['data']['n_steps_in'],
         out_time_lag=config['data']['n_steps_out'],
         out_dim=data['val'][0][0][1].shape[-1],
@@ -158,7 +156,7 @@ if __name__ == '__main__':
         if not os.path.exists(log_dir):
             os.makedirs(log_dir)
 
-        model, exp_info = build_architecture(name=f'exp_transfer_doublenorm_{architecture.__name__}_{"-".join(var_comb["input"])}',
+        model, exp_info = build_architecture(name=f'LSTM_{"-".join(var_comb["input"])}',
                     architecture = architecture,
                     model_params = model_params,
                     data = data_info,
@@ -207,9 +205,9 @@ if __name__ == '__main__':
         with open(log_dir + 'config.yaml', 'w') as outfile:
             yaml.dump(config, outfile, default_flow_style=False)
 
-    pdb.set_trace()
-    accuracy_ts = np.concatenate(acc_ts).reshape(num_mods,6)
+
+    accuracy_ts = np.concatenate(acc_ts).reshape(num_mods,config['data']['n_steps_out'])
 
     print(f'Accuracy mean: {accuracy_ts.mean(axis=0)}, var: {accuracy_ts.std(axis=0)}')
-    np.savez(f"/mnt/beegfs/home/bommer1/WiOSTNN/Data/Results/Statistics/ViT/version_1980_calibrated_olr/lstm_accuracy_97model.npz", 
+    np.savez(f"{config['net_root']}Statistics/ViT/{vit_dir}/lstm_accuracy_{num_mods}model.npz", 
              mean_acc = accuracy_ts.mean(axis=0), std_acc = accuracy_ts.std(axis=0), var_acc = accuracy_ts.var(axis=0), acc = accuracy_ts)

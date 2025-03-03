@@ -1,25 +1,18 @@
-import json
 import os
 import yaml
-import importlib
 from pathlib import Path
-import datetime
-import shutil
-import utils
-import pdb
 from argparse import ArgumentParser
 
-import xarray as xr
 import numpy as np
 import matplotlib.pyplot as plt
-import pandas as pd 
 
+import pandas as pd 
+import xarray as xr
 
 from torch import utils
-import numpy as np
-import pytorch_lightning as pl
+import lightning.pytorch as pl
 
-from utils_model import test_model
+from deepS2S.utils.utils_model import test_model
 
 
 parser = ArgumentParser()

@@ -1,9 +1,7 @@
 import os
 import yaml
-import pickle
 import json
 from argparse import ArgumentParser
-import pdb
 
 import numpy as np
 
@@ -16,18 +14,16 @@ from sklearn.utils import shuffle
 from sklearn.datasets import make_classification
 from sklearn.utils import class_weight
 
-
-
-from dataset.datasets import PlainData
-from utils import concat_data, statics_from_config
-from utils_evaluation import balanced_accuracy
+from deepS2S.dataset.datasets import PlainData
+from deepS2S.utils.utils import concat_data, statics_from_config
+from deepS2S.utils.utils_evaluation import balanced_accuracy
 
 if __name__ == '__main__':
 
     parser = ArgumentParser()
 
     # add PROGRAM level args
-    parser.add_argument("--config", type=str, default='')
+    parser.add_argument("--config", type=str, default='_1980_olr')
     parser.add_argument("--ntrials", type=int, default=100)
 
     args = parser.parse_args()
@@ -38,12 +34,20 @@ if __name__ == '__main__':
     cfile = args.config
 
     # Load config and settings.
-    cfd = os.path.dirname(os.path.abspath(__file__))
-    config = yaml.load(open(f'{cfd}/config/convlstm_config{cfile}.yaml'), Loader=yaml.FullLoader)
+    exd = os.path.dirname(os.path.abspath(__file__))
+    cfd = exd.parent.absolute()
+    config = yaml.load(open(f'{cfd}/config/config{cfile}.yaml'), Loader=yaml.FullLoader)
 
+    config['net_root'] = str(cfd.parent.absolute()) + f'/Data/Network/'
+    config['root'] = str(cfd.parent.absolute()) + f'/Data/Network/Sweeps/'
+
+    
     strt_yr = config.get('strt','')
     trial_num = config.get('version', '')
-    target_dir = config['lr_dir'] + f'_{strt_yr}{trial_num}/statistics/'
+    norm_opt = config.get('norm_opt','')
+    name_var = config.get('tropics','')
+    vit_dir = f'version_{strt_yr}{trial_num}_{norm_opt}{name_var}/'
+    target_dir = config['net_root'] + 'Statistics/LogisticRegression/'
     if not os.path.exists(target_dir):
         os.makedirs(target_dir)
 
@@ -121,7 +125,9 @@ if __name__ == '__main__':
         overall_accuracy_lr, bas_lr = balanced_accuracy(np.argmax(test_probs, axis=-1), targets)
 
         acc_ts.append(overall_accuracy_lr)
-    pdb.set_trace()
-    accuracy_ts = np.concatenate(acc_ts).reshape(num_mods,6)
+
+    accuracy_ts = np.concatenate(acc_ts).reshape(num_mods,config['data']['n_steps_out'])
 
     print(f'Accuracy mean: {accuracy_ts.mean(axis=0)}, var: {accuracy_ts.var(axis=0)}')
+    np.savez(f"{config['net_root']}Statistics/ViT/{vit_dir}/logisticRegression_accuracy_{num_mods}model.npz", 
+             mean_acc = accuracy_ts.mean(axis=0), std_acc = accuracy_ts.std(axis=0), var_acc = accuracy_ts.var(axis=0), acc = accuracy_ts)

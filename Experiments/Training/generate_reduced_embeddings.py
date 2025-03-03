@@ -55,7 +55,8 @@ def _get_activation(name: str):
 
 
 # Load config and settings.
-cfd = os.path.dirname(os.path.abspath(__file__))
+exd = os.path.dirname(os.path.abspath(__file__))
+cfd = exd.parent.absolute()
 config = yaml.load(open(f'{cfd}/config/aurora_embeddings_config.yaml'), Loader=yaml.FullLoader)
 
 pl.seed_everything(42)
@@ -81,8 +82,9 @@ dataset_order = ['train', 'val', 'test']
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(device)
 
-root_path = config['root']
-data_path = f"{root_path}/Embeddings/Aurora/"
+root_path = str(cfd.parent.absolute())+'/Data/Embeddings/Aurora'
+data_path = f"{root_path}/"
+
 if not os.path.exists(Path(data_path)):
         os.makedirs(Path(data_path))
 
@@ -127,7 +129,7 @@ for keys, images in images.items():
         corrs = []
         varc = []
         pca_expl = []
-        # colus = {}
+
         for i in range(len(surf_vars)):
             var_shape = surf_vars[i].shape
             lons = statics.lon.values
@@ -169,9 +171,7 @@ for keys, images in images.items():
             corrs.append(emb)
             varc.append(pca.explained_variance_ratio_.sum())
             
-            # colus[i] = vec_cols
             print(f'sample {i} with {pca.explained_variance_ratio_.sum()} var done in {keys}.')
-            # del emb, corr_vec, corr_low, rows, cols, r_end, vec_cols
            
         embed_shape = emb.shape
     
@@ -180,43 +180,12 @@ for keys, images in images.items():
 
         np.savez(file_emb, embeddings=np.array(dt_emb_new), idx=idx)
         np.savez(f"{data_path}{keys}_variance.npz", variance=pca_expl)
-        # print("Common entries:", common_entries)
         print("Average variance:", varc.mean())
-        del emb, idx, batch, corrs, dt_emb_new#surf_vars, atmos_vars, times, static_vars_ds, lons
+        del emb, idx, batch, corrs, dt_emb_new
 
 
 del model, images, data, activations
-# Save the embeddings.
 
-
-var_comb = {"input":["embeddings", "nae_regimes"], "output":["nae_regimes"]}
-data_info['config']['embeddings_inputs'] = var_shape
-data_info['config']['embeddings'] = embed_shape
-
-dataset_name = config['data']['dataset_name2']
-data_info['dataset_name'] = dataset_name
-data_info['var_comb'] = var_comb
-data_info['seasons'] = seasons
-data_info['config']['nae_path'] = f'WiOSTNN/Version1/data/{dataset_name}/datasets/'
-
-
-with open(f"{data_path}" + 'config.yaml', 'w') as outfile:
-    yaml.dump(data_info, outfile, default_flow_style=False)
-# for sets, embeds in embeddings.items():
-for keys in dataset_order:
-    file_emb = f"{data_path}{keys}_embeddings_cleaned.npz"
-    embeds = np.load(file_emb)
-    
-    dataset = EmbeddingDataset(data = embeds['embeddings'].astype(np.float32),
-                    dataset_name=config['data']['dataset_name2'],
-                    data_info=data_info,
-                    var_comb=var_comb,
-                    seasons=seasons[keys][config['data']['dataset_name2']],
-                    return_dates=False
-                )
-
-    torch.save(dataset, f'{data_path}/{keys}_dataset.pt')
-    del dataset, embeds
         
 
 

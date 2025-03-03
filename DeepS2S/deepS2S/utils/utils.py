@@ -99,14 +99,9 @@ def statics_from_config(config:  dict):
             'test_set_seasons': list(range(config['data'][config['name']]['test_start'],config['data'][config['name']]['test_end']))
         }
         
-        
-    seasons =  {'train':{config['data']['dataset_name1']:list(range(config['data']['pre']['train_start'], config['data']['pre']['train_end'])),
-                        config['data']['dataset_name2']:list(range(config['data']['fine']['train_start'], config['data']['fine']['train_end']))},
-               'val':{config['data']['dataset_name1']:list(range(config['data']['pre']['val_start'], config['data']['pre']['val_end'])),
-                      config['data']['dataset_name2']:list(range(config['data']['fine']['val_start'], config['data']['fine']['val_end']))},
-               'test':{config['data']['dataset_name1']:list(range(config['data']['pre']['test_start'], config['data']['pre']['test_end'])),
-                       config['data']['dataset_name2']:list(range(config['data']['fine']['test_start'], config['data']['fine']['test_end']))},}
-
+    seasons =  {'train':{config['data']['dataset_name2']:list(range(config['data']['fine']['train_start'], config['data']['fine']['train_end']))},
+               'val':{config['data']['dataset_name2']:list(range(config['data']['fine']['val_start'], config['data']['fine']['val_end']))},
+               'test':{config['data']['dataset_name2']:list(range(config['data']['fine']['test_start'], config['data']['fine']['test_end']))}}
 
 
     return data_info, seasons
@@ -255,7 +250,8 @@ def get_params_from_model_obj(config:  dict,
     strt_yr = config.get('strt','')
     trial_num = config.get('version', '')
     norm_opt = config.get('norm_opt','')
-    name_var = config.get('tropics','')   
+    name_var = config.get('tropics','') 
+    arch = config.get('arch','')  
     exp_dir =  config['root'] + f'{arch}Sweep_{strt_yr}{trial_num}_{norm_opt}{name_var}/'
   
     try : 

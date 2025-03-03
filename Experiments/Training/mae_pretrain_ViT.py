@@ -1,23 +1,21 @@
 import os
 import yaml
 from argparse import ArgumentParser
-import shutil
+
 
 import torch
-import pdb
 from torch import dropout, nn, utils
 import torch.optim as optim
 import numpy as np
 
 # DL packages.
-import lightning
 import lightning.pytorch as pl
-from lightning.pytorch.callbacks import StochasticWeightAveraging, EarlyStopping
+from lightning.pytorch.callbacks import EarlyStopping
 
-import model.ViT as vit
-from dataset.datasets_static import SingleData
-import model.mae as Mae
-from utils import statics_from_config
+
+import deepS2S.model.ViT as vit
+from deepS2S.dataset.datasets_static import SingleData
+import deepS2S.model.mae as Mae
 
 if __name__ == '__main__':
 
@@ -27,16 +25,20 @@ if __name__ == '__main__':
     parser.add_argument("--notification_email", type=str, default="pbommer@atb-potsdam.de")
     parser.add_argument("--accelerator", default="gpu")
     parser.add_argument("--devices", default=1)
-    parser.add_argument("--config", type=str, default='')
+    parser.add_argument("--config", type=str, default='ViT')
     args = parser.parse_args()
 
     cfile = args.config
 
     # Load config and settings.
-    cfd = os.path.dirname(os.path.abspath(__file__))
+    exd = os.path.dirname(os.path.abspath(__file__))
+    cfd = exd.parent.absolute()
     config = yaml.load(open(f'{cfd}/config/config_pretrain{cfile}.yaml'), Loader=yaml.FullLoader)
 
-    lightning.lite.utilities.seed.seed_everything(42)
+    config['net_root'] = str(cfd.parent.absolute()) + f'/Data/Network/'
+    config['root'] = str(cfd.parent.absolute()) + f'/Data/Network/Sweeps/'
+
+    pl.seed_everything(42)
 
     var_comb = config['var_comb']
 
@@ -91,7 +93,7 @@ if __name__ == '__main__':
     strt_yr = config.get('strt','')
     trial_num = config.get('version', '')
     norm_opt = config.get('norm_opt','')
-    log_dir = log_dir + f'version_{strt_yr}{trial_num}_{norm_opt}/individual_static_large/'
+    log_dir = log_dir + f'version_{strt_yr}{trial_num}_{norm_opt}/individual_static/'
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
@@ -105,7 +107,6 @@ if __name__ == '__main__':
         test_loader = Pre_data.test_dataloader()
         
         data = Pre_data.access_dataset()
-        pdb.set_trace()
   
         frame_size = [int(x) for x in data['val'][0][0][0].shape][-2:]
         input_dim = [int(x) for x in data['val'][0][0][0].shape][0]

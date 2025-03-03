@@ -3,19 +3,15 @@ import os
 from typing import List
 from typing import Optional
 import yaml
-import shutil
+
 from pathlib import Path
 from argparse import ArgumentParser
 
 import numpy as np
 from packaging import version
-# IN MODELS.PY
-# from sklearn.metrics import balanced_accuracy_score
 
-import pdb
 
 # DL packages.
-import lightning
 import lightning.pytorch as pl
 from lightning.pytorch.callbacks import StochasticWeightAveraging, EarlyStopping
 
@@ -28,13 +24,17 @@ import optuna
 from optuna.integration import PyTorchLightningPruningCallback
 
 # Functions from py-files.
-from loss import FocalLossAdaptive
-from dataset.datasets_wrapped import TransferData
-from build_model import build_finetune, build_architecture_sweep, build_encoder
-from utils_data import cls_weights
-from utils import statics_from_config
-from utils_evaluation import evaluate_accuracy
-from model import mae, ViT, StNN_static
+# from deepS2S.model.temporalViT import TemporalTransformerModel
+# from deepS2S.dataset.dataset_embeddings import EmbeddingDataset
+# from deepS2S.utils.utils_train import compute_class_weights, training, accuracy_per_timestep
+
+from deepS2S.model import ViTLSTM
+from deepS2S.model.loss import FocalLossAdaptive
+from deepS2S.dataset.datasets_wrapped import TransferData
+from deepS2S.utils.utils_build import build_architecture_sweep, build_encoder
+from deepS2S.utils.utils_data import cls_weights
+from deepS2S.utils.utils_evaluation import evaluate_accuracy
+from deepS2S.utils.utils import statics_from_config
 
 def objective_vit(trial: optuna.trial.Trial,
               ) -> float:
@@ -42,14 +42,15 @@ def objective_vit(trial: optuna.trial.Trial,
 
     
     parser = ArgumentParser()
-    parser.add_argument("--config", type=str, default='')
+    parser.add_argument("--config", type=str, default='_1980_olr')
     parser.add_argument("--network", type=str, default='conv')
     parser.add_argument("--ntrials", type=int, default=100)
     args = parser.parse_args()
 
     cfile = args.config
     # Load config and settings.
-    cfd = os.path.dirname(os.path.abspath(__file__))
+    exd = os.path.dirname(os.path.abspath(__file__))
+    cfd = exd.parent.absolute()
     config = yaml.load(open(f'{cfd}/config/loop_config{cfile}.yaml'), Loader=yaml.FullLoader)
 
     strt_yr = config.get('strt','')
@@ -57,7 +58,7 @@ def objective_vit(trial: optuna.trial.Trial,
     norm_opt = config.get('norm_opt','')
     name_var = config.get('tropics','')
 
-    log_dir = config['net_root'] + f'Sweeps/ViT/Sweep_{strt_yr}{trial_num}_{norm_opt}{name_var}/'
+    log_dir = config['net_root'] + f'Sweeps/ViT-LSTM/Sweep_{strt_yr}{trial_num}_{norm_opt}{name_var}/'
 
     # Initialize optimization range.
     swa =  trial.suggest_float("SWA",1e-5, 1e-1,log=True)
@@ -69,7 +70,6 @@ def objective_vit(trial: optuna.trial.Trial,
     gamma = {}
     gamma['val'] = 3
     gamma['nurmeric'] = 1
-    gc_pre = trial.suggest_float("gradient_clip_pre", 0.,0.9)
     gc_fine = trial.suggest_float("gradient_clip_fine", 0.,0.9)
 
 
@@ -85,44 +85,24 @@ def objective_vit(trial: optuna.trial.Trial,
     var_comb = config['var_comb']
 
     data_info, seasons = statics_from_config(config)
-    if "fine" in setting_training:
-        seasons =  {'train':{config['data']['dataset_name2']:list(range(config['data']['fine']['train_start'], config['data']['fine']['train_end']))},
-            'val':{config['data']['dataset_name2']:list(range(config['data']['fine']['val_start'], config['data']['fine']['val_end']))},
-            'test':{config['data']['dataset_name2']:list(range(config['data']['fine']['test_start'], config['data']['fine']['test_end']))}}
 
-
-    lightning.lite.utilities.seed.seed_everything(42)
+    pl.seed_everything(42)
 
     # Create data loader.
     params = {'seasons': seasons, 'test_set_name':config['data'][config['name']]['setname']}
-    if "fine" in setting_training:
-        Fine_data = TransferData(config['data']['dataset_name2'], 
-                                    var_comb, data_info, batch_size, **params)
+    Fine_data = TransferData(config['data']['dataset_name2'], 
+                                var_comb, data_info, batch_size, **params)
 
-        Fine_data.train_dataloader()
-        Fine_data.val_dataloader()
-        Fine_data.test_dataloader()
-        test_loader = Fine_data.test_dataloader()
+    Fine_data.train_dataloader()
+    Fine_data.val_dataloader()
+    Fine_data.test_dataloader()
+    test_loader = Fine_data.test_dataloader()
 
-        
-        data = Fine_data.access_dataset()
+    
+    data = Fine_data.access_dataset()
 
-        cls_wt = cls_weights(data, 'balanced')
-    else:
-        Pre_data = TransferData(config['data']['dataset_name1'], 
-                                    var_comb, data_info, batch_size, **params)
-        Fine_data = TransferData(config['data']['dataset_name2'], 
-                                    var_comb, data_info, batch_size, **params)
-        Pre_data.train_dataloader()
-        Pre_data.val_dataloader()
-        Fine_data.train_dataloader()
-        Fine_data.val_dataloader()
-        Fine_data.test_dataloader()
-        test_loader = Pre_data.test_dataloader()
-        
-        data = Pre_data.access_dataset()
+    cls_wt = cls_weights(data, 'balanced')
 
-        cls_wt = cls_weights(data, 'balanced')
     frame_size = [int(x) for x in data['val'][0][0][0].shape][-2:]
     input_dim = [int(x) for x in data['val'][0][0][0].shape][1]
     # remember for reproducibility and analysis
@@ -137,7 +117,7 @@ def objective_vit(trial: optuna.trial.Trial,
     
 
     # Create model.
-    architecture = StNN_static.spatiotemporal_Neural_Network
+    architecture = ViTLSTM.ViT_LSTM
 
     early_stop_callback = EarlyStopping(monitor="train_acc", 
                                         min_delta=0.00, patience=3, verbose=False, mode="max")

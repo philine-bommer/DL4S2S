@@ -13,9 +13,9 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 import numpy as np # USE EITHER NUMPY OR TORCH 
 
-from model.temporalViT import TemporalTransformerModel
-from dataset.dataset_embeddings import EmbeddingDataset
-from train.utils_train import compute_class_weights, training, accuracy_per_timestep
+from deepS2S.model.temporalViT import TemporalTransformerModel
+from deepS2S.dataset.dataset_embeddings import EmbeddingDataset
+from deepS2S.utils.utils_train import compute_class_weights, training, accuracy_per_timestep
 
 if __name__ == '__main__':
 
@@ -34,19 +34,18 @@ if __name__ == '__main__':
 
 
     # Load data.
-    root_path = '/mnt/beegfs/home/bommer1/WiOSTNN/Data/Embeddings/Aurora'#f'.' #set path to root of the project and where the data is stored
+    exd = os.path.dirname(os.path.abspath(__file__))
+    cfd = exd.parent.absolute()
+    config = yaml.unsafe_load(open(f'{cfd}/config/config_aurora_T.yaml'))
+
+    root_path = str(cfd.parent.absolute())+'/Data/Embeddings/Aurora'
     data_path = f"{root_path}/"
-    
-    # config = yaml.load(open(f'{data_path}config.yaml'), Loader=yaml.FullLoader)
-    config = yaml.unsafe_load(open(f'{data_path}config.yaml'))
-
-
 
     dataset_order = ['train', 'val', 'test']
     seasons = config['seasons']
     dataset_name = config['dataset_name']
     config['config']['nae_path'] = f"{root_path}/" #don't change this
-    batch_size = 32
+    batch_size =  config['network']['batch_size']
 
     keys = 'train'
     file_emb = f"{data_path}{keys}_embeddings_cleaned.npz"

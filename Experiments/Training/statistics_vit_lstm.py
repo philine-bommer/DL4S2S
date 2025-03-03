@@ -14,13 +14,18 @@ import lightning
 import lightning.pytorch as pl
 from lightning.pytorch.callbacks import StochasticWeightAveraging, EarlyStopping
 
-from model import mae, ViT, StNN_static
-from loss import FocalLossAdaptive
-from dataset.datasets_wrapped import TransferData
-from build_model import build_architecture, build_finetune, build_encoder
-from utils_data import cls_weights
-from utils_evaluation import evaluate_accuracy, numpy_predict
-from utils import statics_from_config, get_params_from_best_model
+# from deepS2S.model.temporalViT import TemporalTransformerModel
+# from deepS2S.dataset.dataset_embeddings import EmbeddingDataset
+# from deepS2S.utils.utils_train import compute_class_weights, training, accuracy_per_timestep
+
+
+from deepS2S.model import ViTLSTM
+from deepS2S.model.loss import FocalLossAdaptive
+from deepS2S.dataset.datasets_wrapped import TransferData
+from deepS2S.utils.utils_build import build_architecture, build_encoder
+from deepS2S.utils.utils_data import cls_weights
+from deepS2S.utils.utils_evaluation import evaluate_accuracy, numpy_predict
+from deepS2S.utils.utils import statics_from_config, get_params_from_best_model
 
 if __name__ == '__main__':
 
@@ -30,7 +35,7 @@ if __name__ == '__main__':
     parser.add_argument("--notification_email", type=str, default="pbommer@atb-potsdam.de")
     parser.add_argument("--accelerator", default="gpu")
     parser.add_argument("--devices", default=1)
-    parser.add_argument("--config", type=str, default='')
+    parser.add_argument("--config", type=str, default='_1980_olr')
     parser.add_argument("--network", type=str, default='ViT')
     parser.add_argument("--ntrials", type=int, default=100)
 
@@ -39,8 +44,12 @@ if __name__ == '__main__':
     cfile = args.config
 
     # Load config and settings.
-    cfd = os.path.dirname(os.path.abspath(__file__))
+    exd = os.path.dirname(os.path.abspath(__file__))
+    cfd = exd.parent.absolute()
     config = yaml.load(open(f'{cfd}/config/loop_config{cfile}.yaml'), Loader=yaml.FullLoader)
+
+    config['net_root'] = str(cfd.parent.absolute()) + f'/Data/Network/'
+    config['root'] = str(cfd.parent.absolute()) + f'/Data/Network/Sweeps/'
 
     num_mods = config.get('num_m', 100)
 
@@ -49,7 +58,7 @@ if __name__ == '__main__':
     # Set up models args.
     ntype = args.network
     config['root'] = config['root'] + f"{ntype}/"
-    architecture = StNN_static.spatiotemporal_Neural_Network
+    architecture = ViTLSTM.ViT_LSTM
     conv_params = get_params_from_best_model(config, 'spatiotemporal')
 
     var_comb = config['var_comb']
@@ -57,7 +66,7 @@ if __name__ == '__main__':
     #Initialize static variables.
     setting_training = config['setting_training']
 
-    data_info, _ = statics_from_config(config)
+    data_info, seasons = statics_from_config(config)
     
     seasons =  {'train':{config['data']['dataset_name2']:list(range(config['data']['fine']['train_start'], config['data']['fine']['train_end']))},
         'val':{config['data']['dataset_name2']:list(range(config['data']['fine']['val_start'], config['data']['fine']['val_end']))},
@@ -122,7 +131,7 @@ if __name__ == '__main__':
     model_params = dict(
         encoder_u = Mae_u,
         encoder_sst = Mae_sst,
-        enc_out_shape = [1,config_enc['vit']['dim']],#config_enc['enc_shape'],
+        enc_out_shape = [1,config_enc['vit']['dim']],
         in_time_lag=config['data']['n_steps_in'],
         out_time_lag=config['data']['n_steps_out'],
         out_dim=data['val'][0][0][1].shape[-1],
@@ -138,7 +147,7 @@ if __name__ == '__main__':
         n_heads = config['network'].get('n_heads',0),
         clbrt = config['network'].get('clbrt',0)
     )
-    
+    acc_ts = []
     for i in seeds:
         pl.seed_everything(i)
 
@@ -163,7 +172,7 @@ if __name__ == '__main__':
                     )
 
 
-        model, exp_info = build_architecture(name=f'exp_transfer_doublenorm_{architecture.__name__}_{"-".join(var_comb["input"])}',
+        model, exp_info = build_architecture(name=f'{architecture.__name__}_{"-".join(var_comb["input"])}',
                             architecture = architecture,
                             model_params = model_params,
                             data = data_info,
@@ -175,8 +184,6 @@ if __name__ == '__main__':
                             batch_size=conv_params['bs'],
                             n_instances=1,
                             target_dir = log_dir)
-
-        # trainer_fine.logger.log_hyperparams(model_params) #only if trainer logger = False
 
         trainer_fine.fit(model, Fine_data)
 
@@ -194,6 +201,7 @@ if __name__ == '__main__':
 
         fine_acc, fine_acc_ts = evaluate_accuracy(model, trainer_fine, Fine_data.test_dataloader(),config, data_info, var_comb, seasons, 'test')
         
+        acc_ts.append(fine_acc_ts)
         pred = numpy_predict(model, Fine_data.test_dataloader())
        
         predictions = []
@@ -203,13 +211,12 @@ if __name__ == '__main__':
 
         result_file = 'predictions.npz'
         np.savez(log_dir + result_file, acc = fine_acc_ts, mean_acc = np.mean(fine_acc_ts), predictions = predictions)
-
-        if not "fine" in setting_training:
-            try:
-                shutil.rmtree(trainer_fine.logger.log_dir)
-            except Exception as e:
-                print(f" Error deleting logger path fine tuning: {e}")
         
         config['loaded_pars'] = conv_params
         with open(log_dir + 'config.yaml', 'w') as outfile:
             yaml.dump(config, outfile, default_flow_style=False)
+    accuracy_ts = np.concatenate(acc_ts).reshape(num_mods,config['data']['n_steps_out'])
+
+    print(f'Accuracy mean: {accuracy_ts.mean(axis=0)}, var: {accuracy_ts.std(axis=0)}')
+    np.savez(f"{log_dirs}/vit-lstm_accuracy_{num_mods}model.npz", 
+             mean_acc = accuracy_ts.mean(axis=0), std_acc = accuracy_ts.std(axis=0), var_acc = accuracy_ts.var(axis=0), acc = accuracy_ts)

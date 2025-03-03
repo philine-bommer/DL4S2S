@@ -1,13 +1,12 @@
 root: /mnt/beegfs/home/bommer1/WiOSTNN/Data/Network/Sweeps/
 net_root: /mnt/beegfs/home/bommer1/WiOSTNN/Data/Network/
 strt: '1980'
-base_dir: /mnt/beegfs/home/bommer1/WiOSTNN/Data/Network/baseline/
+base_dir: ''
 lr_dir: /mnt/beegfs/home/bommer1/WiOSTNN/Data/Network/lr/version
 version: ''
 transfer: 1
 devices: 1
 norm_opt: 'calibrated'
-# var_comb: [{'input': ['sst'], 'output': ['nae_regimes']},{'input': ['u'], 'output': ['nae_regimes']}]
 var_comb: [{'input': ['u'], 'output': ['nae_regimes']},{'input': ['olr'], 'output': ['nae_regimes']}]
 name: 'pre'
 percent_valid: 0.35
@@ -44,7 +43,7 @@ data:
 vit:
   channels: 1
   depth: 6
-  dim: 16
+  dim: 512
   dropout: 0.1
   emb_dropout: 0.1
   heads: 16
@@ -57,7 +56,7 @@ mae:
   decoder_depth: 6
   decoder_dim: 128
   masking_ratio: 0.75
-logistic: 'version_1980_10EOFs'
+logistic: 'version_1980'
 network:
   norm_both: True
   epochs: 200

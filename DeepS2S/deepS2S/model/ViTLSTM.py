@@ -148,7 +148,7 @@ class Encoder_ViT(nn.Module):
         self.cls_token = nn.Parameter(torch.randn(1, 1, self.params['dim']))
 
 
-class spatiotemporal_Neural_Network(pl.LightningModule):
+class ViT_LSTM(pl.LightningModule):
 
     def __init__(self,
                  encoder_u,
@@ -203,7 +203,7 @@ class spatiotemporal_Neural_Network(pl.LightningModule):
             factor (int, optional): factor to upsample regimes
             **params: Additional parameters for the model.
         """
-        super(spatiotemporal_Neural_Network, self).__init__()
+        super(ViT_LSTM, self).__init__()
 
         self.save_hyperparameters(ignore=['encoder_u','encoder_sst'])
 
@@ -260,14 +260,6 @@ class spatiotemporal_Neural_Network(pl.LightningModule):
         else: 
             if 'base' in self.mode:
                 decoder_input_dim = in_time_lag * out_dim
-            elif 'images' in self.mode:
-                decoder_input_dim = 2*utils.prod(encoder_out_dim)
-            elif 'sst' in self.mode:
-                decoder_input_dim = utils.prod(encoder_out_dim) + out_dim
-            elif 'pv' in self.mode:
-                decoder_input_dim = utils.prod(encoder_out_dim) + out_dim
-            elif 'raw' in self.mode:
-                decoder_input_dim = 2*utils.prod(np.array(frame_size)) + out_dim
             else:
                 decoder_input_dim = 2*utils.prod(encoder_out_dim) + out_dim
             
@@ -332,20 +324,9 @@ class spatiotemporal_Neural_Network(pl.LightningModule):
             # Min-Max norm  (x-x.min())/(x.max()-x.min()) 
             # -> i.e. range [0,1] for both
             x = (x-x.min())/(x.max()-x.min())
-        if self.add_attn:
-             ##Attention
-             x_1d = x_1d.reshape(x_1d.shape[0], self.out_time_lag , self.out_size)
-             X = torch.cat((x, x_1d), dim=2)
-             q_x = X
-             v_k = np.swapaxes(x_1d,1,2) #values are weighted according to Softmax(QK)
-             x_enc, attn_weights = self.multihead(q_x,  q_x,  q_x)
-             self.attention_wghts = attn_weights
-
         else:
             if 'base' in self.mode:
                 x = x_1d.reshape(x_1d.shape[0], -1).unsqueeze(1).repeat(1, self.out_time_lag, 1)
-            elif 'images' in self.mode:
-                x = x
             else:
                 x = torch.cat((x, x_1d), dim=2)
 
@@ -533,133 +514,4 @@ class spatiotemporal_Neural_Network(pl.LightningModule):
 
         return x_enc_s, x_enc_u
     
-    # def encode_indvidual(self, img):
-    #     """
-    #     Encodes an individual image using the StNN_static model.
-    #     Args:
-    #         img (torch.Tensor): The input image tensor.
-    #     Returns:
-    #         enc_img (torch.Tensor): The encoded image tensor.
-    #     """
-    #     x = self.to_patch_embedding(img)
-    #     b, n, _ = x.shape
-
-    #     cls_tokens = repeat(self.cls_token, '1 1 d -> b 1 d', b = b)
-    #     x = torch.cat((cls_tokens, x), dim=1)
-    #     x += self.pos_embedding[:, :(n + 1)]
-    #     x = self.dropout(x)
-    #     x = self.encoder_sst.transformer(x)
-
-    #     x = x.mean(dim = 1) if self.pool == 'mean' else x[:, 0]
-
-    #     x = self.to_latent(x)        
-    #     enc_img = self.mlp_head(x)
-
-        
-    #     return enc_img
-    
-    # def forward(self, x_2d, x_1d):
-
-    #     x_enc_s, x_enc_u = self.encode_images(x_2d)
    
-    #     if 'sst' in self.mode:
-    #         x = x_enc_s
-    #     elif 'pv' in self.mode:
-    #         x = x_enc_u
-    #     elif 'raw' in self.mode:
-    #         x = x_2d.reshape(x_2d.shape[0],x_2d.shape[1],self.decoder_input_dim - self.out_size)
-    #     else:
-    #         x = torch.cat((x_enc_s, x_enc_u), dim=2)
-        
-    #     if self.norm: 
-    #         # Min-Max norm  (x-x.min())/(x.max()-x.min()) 
-    #         # -> i.e. range [0,1] for both
-    #         x = (x-x.min())/(x.max()-x.min())
-    #     if self.add_attn:
-    #          ##Attention
-    #          x_1d = x_1d.reshape(x_1d.shape[0], self.out_time_lag , self.out_size)
-    #          X = torch.cat((x, x_1d), dim=2)
-    #          q_x = X#np.swapaxes(X, 1,2)#X
-    #          v_k = np.swapaxes(x_1d,1,2) #values are weighted according to Softmax(QK)
-    #         #  x_enc, attn_weights = self.multihead(q_x,  v_k,  v_k)
-    #          x_enc, attn_weights = self.multihead(q_x,  q_x,  q_x)
-    #          self.attention_wghts = attn_weights
-    #         #  x_enc = np.swapaxes(x_enc,1,2)
-    #         #  print(x_enc.shape)
-    #         #  v_k = np.swapaxes(x_1d,1,2) #values are weighted according to Softmax(QK)
-    #         #  q_x = np.swapaxes(x.unsqueeze(1).repeat(1, self.out_time_lag, 1), 1,2)
-    #         # #  x_enc, attn_weights = self.multihead(q_x,  v_k,  v_k)
-    #         # #  x_enc, attn_weights = self.multihead(v_k,  q_x,  q_x)
-    #         #  x_enc, attn_weights = self.multihead(q_x,  q_x,  q_x)
-    #         #  self.attention_wghts = attn_weights
-    #         #  x_enc = np.swapaxes(x_enc,1,2)
-    #         #  x_enc = x_enc.reshape(x_enc.shape[0], -1)
-    #         #  x_enc = x_enc.unsqueeze(1).repeat(1, self.out_time_lag, 1)
-
-    #     else:
-    #         # x = x.reshape(x.shape[0], -1) 
-    #         if 'base' in self.mode:
-    #             x = x_1d.reshape(x_1d.shape[0], -1).unsqueeze(1).repeat(1, self.out_time_lag, 1)
-    #         elif 'images' in self.mode:
-    #             x = x
-    #         else:
-    #             x = torch.cat((x, x_1d), dim=2)
-
-    #             if self.norm_both: 
-    #                 # Standardize joint vectors: (x - x.mean())/x.std()
-    #                 x = (x - x.mean())/x.std() 
-            
-    #         x_enc = x
-            
-   
-    #     x= self.decoder(x_enc)
-    #     x = torch.squeeze(x)
-    #     if self.output_activation:
-    #         x = self.output_activation(x)
-    #     return x
-        # if add_attn:
-        #     # self.multihead = nn.MultiheadAttention(self.out_time_lag, self.attn_heads, batch_first=True)
-        #     self.multihead = nn.MultiheadAttention(encoder_out_dim[0] * 2 * encoder_out_dim[1] + out_dim, self.attn_heads, batch_first=True)
-
-        #     # decoder_input_dim = 45056
-        #     # decoder_input_dim =self.out_time_lag
-        #     decoder_input_dim = encoder_out_dim[0] * 2 * encoder_out_dim[1] + out_dim
-
-        # else: 
-        #     if 'base' in self.mode:
-        #         decoder_input_dim = in_time_lag * out_dim
-        #     elif 'images' in self.mode:
-        #         decoder_input_dim = 2*utils.prod(encoder_out_dim)
-        #     elif 'sst' in self.mode:
-        #         decoder_input_dim = utils.prod(encoder_out_dim) + out_dim
-        #     elif 'pv' in self.mode:
-        #         decoder_input_dim = utils.prod(encoder_out_dim) + out_dim
-        #     elif 'raw' in self.mode:
-        #         decoder_input_dim = 2*utils.prod(np.array(frame_size)) + out_dim
-        #     else:
-        #         decoder_input_dim = 2*utils.prod(encoder_out_dim) + out_dim
-            
-        #     if self.scale:
-        #         self.upsample = nn.Linear(in_time_lag * out_dim, 2*utils.prod(encoder_out_dim))
-        #         decoder_input_dim = 2*2*utils.prod(encoder_out_dim)
-            
-
-        # self.decoder_input_dim =decoder_input_dim
-        # if 'linear' in self.mode:
-        #     # self.decoder = nn.Sequential(
-        #     # TimeDistributed(nn.Linear(decoder_input_dim, int(decoder_input_dim/4)), batch_first=True, non_linear=False),
-        #     # TimeDistributed(nn.Linear(int(decoder_input_dim/4), int(decoder_input_dim/8)), batch_first=True, non_linear=False),
-        #     # TimeDistributed(nn.Linear(int(decoder_input_dim/8), int(decoder_input_dim/16)), batch_first=True, non_linear=False),
-        #     # TimeDistributed(nn.Linear(int(decoder_input_dim/16), int(decoder_input_dim/32)), batch_first=True, non_linear=False),
-        #     # TimeDistributed(nn.Linear(int(decoder_input_dim/32), self.out_size), batch_first=True)
-        #     # )
-        #     self.decoder = nn.Sequential(
-        #     TimeDistributed(nn.Linear(decoder_input_dim, self.out_size), batch_first=True, non_linear=False),
-        #     )
-        # else:
-        #     self.decoder = nn.Sequential(
-        #         nn.LSTM(input_size=decoder_input_dim, hidden_size=decoder_hidden_dim, batch_first=True),
-        #         TimeDistributed(nn.Linear(decoder_hidden_dim, self.out_size), batch_first=True)
-        #     )
-
-

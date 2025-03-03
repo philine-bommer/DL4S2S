@@ -7,7 +7,7 @@ from pathlib import Path
 import lightning.pytorch as pl
 import optuna
 
-from Experiments.Training.hyperparameter_tuning_objective import objective_vit
+from hyperparameter_tuning_objective import objective_vit
 
 
 if __name__ == "__main__":
@@ -29,7 +29,8 @@ if __name__ == "__main__":
     ntype = args.network
     ntr = args.ntrials
     # Load config and settings.
-    cfd = os.path.dirname(os.path.abspath(__file__))
+    exd = os.path.dirname(os.path.abspath(__file__))
+    cfd = exd.parent.absolute()
 
     config = yaml.load(open(f'{cfd}/config/loop_config{cfile}.yaml'), Loader=yaml.FullLoader)
     arch = 'ViT-LSTM/'
