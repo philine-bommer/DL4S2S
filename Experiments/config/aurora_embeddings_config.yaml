@@ -1,9 +1,9 @@
-root: /mnt/beegfs/home/bommer1/WiOSTNN/Data/
-net_root: /mnt/beegfs/home/bommer1/WiOSTNN/Data/Network/
+root: ''
+net_root: ''
 strt: '1980'
-base_dir: /mnt/beegfs/home/bommer1/WiOSTNN/Data/Network/baseline/
-lr_dir: /mnt/beegfs/home/bommer1/WiOSTNN/Data/Network/lr/version
-version: '_10eofs'
+base_dir: ''
+lr_dir: ''
+version: ''
 enc: '_static'
 setting_training: "fine"
 transfer: 1
@@ -56,4 +56,4 @@ network:
   norm_both: True
   epochs: 200
   clbrt: True
-logistic: 'version_1980_10EOFs'
+logistic: ''
