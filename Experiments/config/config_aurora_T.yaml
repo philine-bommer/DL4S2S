@@ -14,7 +14,7 @@ config:
   n_steps_in: 6
   n_steps_lag: 0
   n_steps_out: 6
-  nae_path: ../Data/ERA5/datasets/
+  nae_path: '../Data/ERA5/datasets/'
   regime_path: ''
   stack_maps: true
   strt: '1980'
