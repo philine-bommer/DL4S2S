@@ -1,8 +1,8 @@
-root: /mnt/beegfs/home/bommer1/WiOSTNN/Data/Network/Sweeps/
-net_root: /mnt/beegfs/home/bommer1/WiOSTNN/Data/Network/
+root: ''
+net_root: ''
 strt: '1980'
-base_dir: /mnt/beegfs/home/bommer1/WiOSTNN/Data/Network/baseline/
-lr_dir: /mnt/beegfs/home/bommer1/WiOSTNN/Data/Network/lr/version
+base_dir: ''
+lr_dir: ''
 version: ''
 enc: '_static'
 arch: 'ViT/'
@@ -14,7 +14,7 @@ transfer: 1
 devices: 1
 norm_opt: 'calibrated'
 var_comb: {'input': ['MJO_9cat_index', 'pv_index', 'nae_regimes'], 'output': ['nae_regimes']}
-name: 'pre'
+name: 'fine'
 percent_valid: 0.35
 epochs: 200 
 data:
@@ -39,13 +39,6 @@ data:
     train_end: 28
     val_start: 28
     val_end: 33
-    # setname: 'ERA5'
-    # test_start: 63
-    # test_end: 72
-    # train_start: 31 
-    # train_end: 58
-    # val_start: 58
-    # val_end: 63
   n_steps_in: 6
   lag: 0
   n_steps_out: 6
@@ -58,4 +51,4 @@ network:
   norm_both: True
   epochs: 200
   clbrt: True
-logistic: 'version_1980_10EOFs'
+logistic: ''
