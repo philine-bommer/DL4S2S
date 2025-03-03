@@ -1,8 +1,8 @@
-root: /mnt/beegfs/home/bommer1/WiOSTNN/Data/Network/Sweeps/
-net_root: /mnt/beegfs/home/bommer1/WiOSTNN/Data/Network/
+root: ''
+net_root: ''
 strt: '1980'
 base_dir: ''
-lr_dir: /mnt/beegfs/home/bommer1/WiOSTNN/Data/Network/lr/version
+lr_dir: ''
 version: ''
 transfer: 1
 devices: 1
@@ -56,7 +56,7 @@ mae:
   decoder_depth: 6
   decoder_dim: 128
   masking_ratio: 0.75
-logistic: 'version_1980'
+logistic: ''
 network:
   norm_both: True
   epochs: 200
