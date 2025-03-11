@@ -18,7 +18,7 @@ from deepS2S.utils.utils_model import test_model
 parser = ArgumentParser()
 
 # add PROGRAM level args
-parser.add_argument("--config", type=str, default='')
+parser.add_argument("--config", type=str, default='_1980_olr')
 parser.add_argument("--calculate", type=int, default=0)
 parser.add_argument("--network", type=str, default='ViT')
 parser.add_argument("--ntrials", type=int, default=100)
@@ -50,7 +50,7 @@ val_acc = []
 folders = [] 
 for pat in paths:
     if calc:
-            mod_name = 'spatiotemporal_Neural_Network'
+            mod_name = 'ViT_LSTM'
             test_accu, test_acc_ts, val_accu, val_acc_ts = test_model(config, pat, mod_name, [0])
             test_acc.append(np.mean(test_acc_ts))
             

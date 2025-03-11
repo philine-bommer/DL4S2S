@@ -10,32 +10,22 @@ import pdb
 
 import xarray as xr
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from scipy import stats
-import pandas as pd 
-from scipy import interp
+
+
 
 
 from torch import utils
 import lightning.pytorch as pl
 
 
-import model.StNN_static as stnn
+from deepS2S.model import ViTLSTM
+from deepS2S.utils.utils_data import load_data
+import deepS2S.utils.utils_evaluation as eval
+from deepS2S.utils.utils import statics_from_config
+from deepS2S.utils.utils_load import collect_statistics_from_model, collect_statistics_from_file
+from deepS2S.utils.utils_model import test_model_and_data, best_model_folder
+from deepS2S.utils.plot_utils import *
 
-from utils import statics_from_config
-from dataset.datasets_wrapped import TransferData, WeatherDataset
-from build_model import load_multi_model
-from utils_data import generate_clim_pred, load_data
-from utils_model import test_model_and_data, best_model_folder
-from plot_utils import *
-import utils_evaluation as eval
-from utils_load import collect_statistics_from_model, collect_statistics_from_file
-
-import matplotlib as mpl
-mpl.get_configdir()
-
-plt.style.use('seaborn')
 
 # Set hyperparameters.
 parser = ArgumentParser()
@@ -45,8 +35,11 @@ parser.add_argument("--ntrials", default=100)
 args = parser.parse_args()
 
 cfile = args.config
-config = yaml.load(open(f'./config/convlstm_config{cfile}.yaml'), Loader=yaml.FullLoader)
-config_base = yaml.load(open(f'./config/convlstm_config_1980_olr.yaml'), Loader=yaml.FullLoader)
+
+exd = os.path.dirname(os.path.abspath(__file__))
+cfd = exd.parent.absolute()
+config = yaml.load(open(f'{cfd}/config/config{cfile}.yaml'), Loader=yaml.FullLoader)
+config_base = yaml.load(open(f'{cfd}/config/config_1980_olr.yaml'), Loader=yaml.FullLoader)
 
 strt_yr = config.get('strt','')
 trial_num = config.get('version', '')
@@ -55,34 +48,34 @@ arch = config.get('arch', 'ViT')
 tropics = config.get('tropics', '')
 temp_scaling = config.get('temp_scaling', False)
 
+config['net_root'] = str(cfd.parent.absolute()) + f'/Data/Network/'
+config['root'] = str(cfd.parent.absolute()) + f'/Data/Network/Sweeps/'
+res_path = str(cfd.parent.absolute()) + f'/Data/Results/'
+
 if 'index' == config.get('exp_type', ''):
-    if '_9cat' in config['var_comb']['input'][0]:
-        stat_dir =  config['net_root'] + f'Statistics/Index_LSTM_9cat/'
-        result_path = f'/mnt/beegfs/home/bommer1/WiOSTNN/Data/Results/Statistics/Index_LSTM_9cat/'
-    else:
-        stat_dir =  config['net_root'] + f'Statistics/Index_LSTM/'
-        result_path = f'/mnt/beegfs/home/bommer1/WiOSTNN/Data/Results/Statistics/Index_LSTM/'
+    stat_dir =  config['net_root'] + f'Statistics/Index_LSTM/'
+    result_path = f'{res_path}Statistics/Index_LSTM/'
+
 elif config['network'].get('mode', 'run') == 'base':
     stat_dir =  config['net_root'] + f'Statistics/LSTM/'
-    result_path = f'/mnt/beegfs/home/bommer1/WiOSTNN/Data/Results/Statistics/LSTM/'
+    result_path = f'{res_path}Statistics/LSTM/'
 else:
     stat_dir =  config['net_root'] + f'Statistics/{arch}'
-    result_path = f'/mnt/beegfs/home/bommer1/WiOSTNN/Data/Results/Statistics/{arch}/'
+    result_path = f'{res_path}Statistics/{arch}/'
 
 results_directory = Path(f'{result_path}version_{strt_yr}{trial_num}_{norm_opt}{tropics}/')
 os.makedirs(results_directory, exist_ok=True)
 
-base_dir = config['base_dir']
-lr_dir = config['lr_dir']
+base_dir = stat_dir
 
-mod_name = 'spatiotemporal_Neural_Network'
-architecture = stnn.spatiotemporal_Neural_Network
+mod_name = 'ViT_LSTM'
+architecture = ViTLSTM.ViT_LSTM
 
-base_name = 'exp_lstm_baseline_LSTM_decoder_sst-u-nae_regimes'
-lr_name = 'finalized_model.sav'
+base_name = 'ViT_LSTM'
 
 
-cm_list = ['#7fbf7b','#1b7837','#762a83','#9970ab','#c2a5cf']  #762a83
+
+cm_list = ['#7fbf7b','#1b7837','#762a83','#9970ab','#c2a5cf']  
 regimes = ['SB', 'NAO-', 'AR', 'NAO+']
 
 if not os.path.exists(results_directory):
@@ -111,7 +104,7 @@ bhp_dir, cf_dir, _ = best_model_folder(config_base, base_dir, architecture, **pa
 acc_base, model_baseline, _, _, _, _, _, _ = test_model_and_data(config_base, bhp_dir, cf_dir, architecture, [1])
 
 trainer = pl.Trainer(accelerator="gpu",
-                     devices = [3],
+                     devices = True,
                     max_steps=200, 
                     default_root_dir= results_directory, 
                     deterministic=True)
@@ -171,7 +164,6 @@ for input, output, weeks, days in data_set:
         u10.append(input[0][None,:,1,...].numpy())
         sst.append(input[0][None,:,0,...].numpy())
 
-    # nae_inputs.append(input[1].numpy())
 
     persistance.append(np.repeat(np.argmax(input[1].numpy()[-1]), 6).T)
     i += 1
@@ -242,7 +234,7 @@ collected_data = {'persistance': persistance,
                   'loop_classes':loop_classes,
                   'predictions_baseline':predictions_baseline,
                   'targets':targets,}
-                #   'results':results}
+
 if temp_scaling:
     np.savez(f'{results_directory}/collected_loop_data_{len(pths)-1}_temp_scale.npz',**collected_data)
 else:

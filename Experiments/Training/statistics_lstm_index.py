@@ -94,11 +94,8 @@ if __name__ == '__main__':
     # remember for reproducibility and analysis
     data_info['var_comb'] = var_comb
 
-    
-    if '_9cat' in config['var_comb']['input'][0]:
-        log_dir = config['net_root'] + 'Statistics/Index_LSTM_9cat/'
-    else:
-        log_dir = config['net_root'] + 'Statistics/Index_LSTM/'
+
+    log_dir = config['net_root'] + 'Statistics/Index_LSTM/'
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 

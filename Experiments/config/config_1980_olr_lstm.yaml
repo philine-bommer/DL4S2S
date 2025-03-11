@@ -49,7 +49,7 @@ data:
   dataset_name2: 'ERA5'
   bs: 36
 network:
-  mode: 'run'
+  mode: 'base'
   kernelsize: 3
   maxpool: 2
   norm_both: True

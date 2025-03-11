@@ -14,11 +14,6 @@ import lightning
 import lightning.pytorch as pl
 from lightning.pytorch.callbacks import StochasticWeightAveraging, EarlyStopping
 
-# from deepS2S.model.temporalViT import TemporalTransformerModel
-# from deepS2S.dataset.dataset_embeddings import EmbeddingDataset
-# from deepS2S.utils.utils_train import compute_class_weights, training, accuracy_per_timestep
-
-
 from deepS2S.model import ViTLSTM
 from deepS2S.model.loss import FocalLossAdaptive
 from deepS2S.dataset.datasets_wrapped import TransferData

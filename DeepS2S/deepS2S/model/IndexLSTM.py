@@ -184,7 +184,7 @@ class LSTM_decoder(pl.LightningModule):
 #############################
 ##### MULTIMODAL ViT-LSTM #####
 #############################
-class spatiotemporal_Neural_Network(pl.LightningModule):
+class Index_LSTM(pl.LightningModule):
 
     def __init__(self,
                  encoder_u,
@@ -237,7 +237,7 @@ class spatiotemporal_Neural_Network(pl.LightningModule):
             mode (str): regimes - random regimes, encoder - random encoder,  base - LSTM baseline, run (default) - STNN
             scale (bool, optional): True - add linear layer to upsample regimes
         """
-        super(spatiotemporal_Neural_Network, self).__init__()
+        super(Index_LSTM, self).__init__()
 
         self.save_hyperparameters(ignore=['encoder_sst','encoder_u'])
 
@@ -259,12 +259,6 @@ class spatiotemporal_Neural_Network(pl.LightningModule):
         self.mode = mode
         self.scale = scale
         self.factor = factor
-        if 'encoder' in mode:
-            print('Test encoder impact with random variables')
-        elif 'regimes' in mode:
-            print('Test regime impact with random variables')
-        if scale:
-            print('Upsample regimes!')
         
         if output_probabilities:
             self.output_activation = nn.Softmax(dim=2)
@@ -292,38 +286,11 @@ class spatiotemporal_Neural_Network(pl.LightningModule):
                 decoder_input_dim = encoder_out_dim[0] * 2 * encoder_out_dim[1] + self.ts_len
 
         else: 
-            if 'base' in self.mode:
-                decoder_input_dim = in_time_lag * out_size
+            decoder_input_dim = in_time_lag * out_size
 
-            elif self.encoder_u is None or self.encoder_sst is None:
-                if self.encoder_u is None and self.encoder_sst is None:
-                    decoder_input_dim = self.ts_len
-                elif 'images' in self.mode:
-                    decoder_input_dim = utils.prod(encoder_out_dim)
-                else:
-                    decoder_input_dim = utils.prod(encoder_out_dim) + self.ts_len
-                
-                if self.scale:
-                    self.upsample = nn.Linear(in_time_lag * out_dim + 1, 2*utils.prod(encoder_out_dim))
-                    decoder_input_dim = 2*2*utils.prod(encoder_out_dim)
-
-            else:
-                if 'images' in self.mode:
-                    decoder_input_dim = 2*utils.prod(encoder_out_dim)
-                else:
-                    decoder_input_dim = 2*utils.prod(encoder_out_dim) + out_dim
-                
-                if self.scale:
-                    self.upsample = nn.Linear(in_time_lag * out_dim, 2*utils.prod(encoder_out_dim))
-                    decoder_input_dim = 2*2*utils.prod(encoder_out_dim)
 
         self.decoder_input_dim =decoder_input_dim
-        if 'linear' in self.mode:
-            self.decoder = nn.Sequential(
-            TimeDistributed(nn.Linear(decoder_input_dim, self.out_size), batch_first=True, non_linear=False),
-            )
-        else:
-            self.decoder = nn.Sequential(
+        self.decoder = nn.Sequential(
                 nn.LSTM(input_size=decoder_input_dim, hidden_size=decoder_hidden_dim, batch_first=True),
                 TimeDistributed(nn.Linear(decoder_hidden_dim, self.out_size), batch_first=True)
             )
@@ -333,64 +300,16 @@ class spatiotemporal_Neural_Network(pl.LightningModule):
     
     def forward(self, x_2d, x_1d):
 
-        if not x_2d:
-            x = x_1d.reshape(x_1d.shape[0], self.out_time_lag , self.ts_len)
-
-        elif x_2d.shape[2]>1:
-
-            x = self.encode_both(x_2d)
-            x_1d = x_1d.reshape(x_1d.shape[0], self.out_time_lag , self.out_size)
-
-        elif not self.encoder_u:
-
-            x_sst = x_2d
-            x = self.encode(x_sst, self.encoder_sst)
-            x_1d = x_1d.reshape(x_1d.shape[0], self.out_time_lag , self.ts_len)
-
-
-        elif not self.encoder_sst:
-
-            x_u = x_2d
-            x = self.encode(x_u, self.encoder_u)
-            x_1d = x_1d.reshape(x_1d.shape[0], self.out_time_lag , self.ts_len)
-
-            if 'base' in self.mode:
-                x = x_1d[:,:,:self.out_size -1]
-
-
-
+        x = x_1d[:,:,:self.out_size -1]
 
         if self.norm: 
             # Min-Max norm  (x-x.min())/(x.max()-x.min()) 
             # -> i.e. range [0,1] for both
             x = (x-x.min())/(x.max()-x.min())
-        if self.add_attn:
-             ##Attention
-             X = torch.cat((x, x_1d), dim=2)
-             q_x = np.swapaxes(X, 1,2)#X
-             v_k = np.swapaxes(x_1d,1,2) #values are weighted according to Softmax(QK)
-             x_enc, attn_weights = self.multihead(q_x,  v_k,  v_k)
-             self.attention_wghts = attn_weights
-             x_enc = np.swapaxes(x_enc,1,2)
+        
+        x = x_1d.reshape(x_1d.shape[0], -1).unsqueeze(1).repeat(1, self.out_time_lag, 1)
 
-        else:
-            if 'base' in self.mode:
-                x = x_1d.reshape(x_1d.shape[0], -1).unsqueeze(1).repeat(1, self.out_time_lag, 1)
-            elif 'images' in self.mode:
-                x = x
-            else:
-                x = torch.cat((x, x_1d), dim=2)
-
-                if self.norm_both: 
-                    # Standardize joint vectors: (x - x.mean())/x.std()
-                    x = (x - x.mean())/x.std() 
-
-            if not x_2d:
-                x_enc = x_1d.reshape(x_1d.shape[0], self.out_time_lag , self.ts_len)
-            elif 'base' in self.mode:
-                x_enc = x
-            else: 
-                x_enc = x
+        x_enc = x
 
         x= self.decoder(x_enc)
         x = torch.squeeze(x)
@@ -441,7 +360,7 @@ class spatiotemporal_Neural_Network(pl.LightningModule):
         inputs, labels = batch
         logits = self.forward(inputs[0],inputs[1])
         loss = self.criterion(logits.reshape(-1, logits.shape[-1]), labels.reshape(-1))
-        acc, certainty, ece = self.get_accuracy(logits, labels)
+        acc, _, ece = self.get_accuracy(logits, labels)
         values = {'train_loss': loss, 'train_ece': ece,'train_acc': acc}
         self.log_dict(values, sync_dist=True)
 
@@ -482,7 +401,7 @@ class spatiotemporal_Neural_Network(pl.LightningModule):
         Returns:
             The predicted logits.
         """
-        inputs, labels = batch
+        inputs, _= batch
         logits = self.forward(inputs[0],inputs[1])
         return logits
     
@@ -506,40 +425,7 @@ class spatiotemporal_Neural_Network(pl.LightningModule):
             self.encoder_sst.freeze()
 
         return "Encoder frozen"
-    
-    def encode(self, x, encoder):
-    
-        for t in range(x.shape[1]):
-            if t == 0:
-                x_enc = encoder.get_image_embedding(x[:,t,...])
-                x_enc = x_enc.reshape(x_enc.shape[0], -1)[:,None,...]
-            else:
-                enc = encoder.get_image_embedding(x[:,t,...]).reshape(x_enc.shape[0], -1)[:,None,...]
-                x_enc = torch.cat((x_enc, enc), dim=1)
 
-        return x_enc
-    
-    def encode_both(self, x_2d):
 
-        x_sst = x_2d[:,:,0,:,:]
-        x_u = x_2d[:,:,1,:,:]
-
-        for t in range(x_2d.shape[1]):
-            if t == 0:
-                x_enc_s = self.encoder_sst.get_image_embedding(x_sst[:,None,t,...])
-                x_enc_s = x_enc_s.reshape(x_enc_s.shape[0], -1)[:,None,...]
-
-                x_enc_u = self.encoder_u.get_image_embedding(x_u[:,None,t,...])
-                x_enc_u = x_enc_u.reshape(x_enc_u.shape[0], -1)[:,None,...]
-            else:
-                enc_s = self.encoder_sst.get_image_embedding(x_sst[:,None,t,...]).reshape(x_enc_s.shape[0], -1)[:,None,...]
-                x_enc_s = torch.cat((x_enc_s, enc_s), dim=1)
-
-                enc_u = self.encoder_u.get_image_embedding(x_u[:,None,t,...]).reshape(x_enc_u.shape[0], -1)[:,None,...]
-                x_enc_u = torch.cat((x_enc_u, enc_u), dim=1)
-        
-        x = torch.cat((x_enc_s, x_enc_u), dim=2)
-
-        return x
 
 
