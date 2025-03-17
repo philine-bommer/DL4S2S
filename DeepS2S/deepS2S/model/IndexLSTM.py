@@ -1,4 +1,3 @@
-import utils
 from typing import Any
 import pdb
 
@@ -182,14 +181,11 @@ class LSTM_decoder(pl.LightningModule):
 
 
 #############################
-##### MULTIMODAL ViT-LSTM #####
+##### Index-LSTM #####
 #############################
 class Index_LSTM(pl.LightningModule):
 
     def __init__(self,
-                 encoder_u,
-                 encoder_sst,
-                 enc_out_shape,
                  in_time_lag,
                  out_time_lag,
                  decoder_hidden_dim,
@@ -198,21 +194,18 @@ class Index_LSTM(pl.LightningModule):
                  weight_decay,
                  cls_wgt,
                  criterion,
+                encoder_u = None,
+                 encoder_olr = None,
                  out_dim=1,
                  dropout=0.0,
                  output_probabilities=False,
                  norm_both = False,
                  norm = True,
                  norm_bch = False,
-                 add_attn = False,
-                 n_heads = 3,
                  clbrt = False,
                  bs = 32,
                  gamma = {},
                  out_size = 4,
-                 mode = 'run',
-                 scale = False,
-                 factor = 1,
                  ts_len = 4,
 
             ):
@@ -251,14 +244,9 @@ class Index_LSTM(pl.LightningModule):
         self.crit = criterion
         self.norm = norm
         self.out_size = out_size
-        self.add_attn = add_attn
-        self.attn_heads = n_heads
         self.clbrt = clbrt
         self.bs = bs
         self.gamma = gamma
-        self.mode = mode
-        self.scale = scale
-        self.factor = factor
         
         if output_probabilities:
             self.output_activation = nn.Softmax(dim=2)
@@ -266,8 +254,7 @@ class Index_LSTM(pl.LightningModule):
             self.output_activation = None
 
         self.encoder_u = encoder_u
-        self.encoder_sst = encoder_sst
-        encoder_out_dim = enc_out_shape
+        self.encoder_olr = encoder_olr
         self.ts_len = ts_len
 
         self.flatten = nn.Flatten()
@@ -275,18 +262,7 @@ class Index_LSTM(pl.LightningModule):
         self.dropout = nn.Dropout(dropout)
 
         
-        if add_attn:
-            if self.encoder_u is None:
-                self.multihead = nn.MultiheadAttention(self.out_time_lag, self.attn_heads, batch_first=True)
-
-                decoder_input_dim = encoder_out_dim[0] * encoder_out_dim[1] + self.ts_len
-            else:
-                self.multihead = nn.MultiheadAttention(self.out_time_lag, self.attn_heads, batch_first=True)
-
-                decoder_input_dim = encoder_out_dim[0] * 2 * encoder_out_dim[1] + self.ts_len
-
-        else: 
-            decoder_input_dim = in_time_lag * out_size
+        decoder_input_dim = ts_len
 
 
         self.decoder_input_dim =decoder_input_dim
@@ -302,10 +278,6 @@ class Index_LSTM(pl.LightningModule):
 
         x = x_1d[:,:,:self.out_size -1]
 
-        if self.norm: 
-            # Min-Max norm  (x-x.min())/(x.max()-x.min()) 
-            # -> i.e. range [0,1] for both
-            x = (x-x.min())/(x.max()-x.min())
         
         x = x_1d.reshape(x_1d.shape[0], -1).unsqueeze(1).repeat(1, self.out_time_lag, 1)
 

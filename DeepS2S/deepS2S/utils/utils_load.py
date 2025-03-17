@@ -1,6 +1,3 @@
-import os
-import yaml
-import importlib
 from pathlib import Path
 
 import xarray as xr
@@ -12,14 +9,12 @@ from torch import utils
 import lightning.pytorch as pl
 
 
-import model.StNN_static as stnn
-
-from utils import statics_from_config
-from DeepS2S.deepS2S.dataset.datasets_regimes import TransferData, WeatherDataset
-from DeepS2S.deepS2S.utils.utils_build import load_multi_model
-from utils_data import generate_clim_pred, load_data
-from utils_model import test_model_and_data, best_model_folder
-import utils_evaluation as eval
+# import utils 
+from ..dataset.datasets_regimes import TransferData, WeatherDataset
+from .utils_build import load_multi_model
+from .utils_data import generate_clim_pred, load_data
+from .utils_model import test_model_and_data, best_model_folder
+from .utils_evaluation import evaluate_accuracy 
 
 
 def collect_statistics_from_model(pths: str, 
@@ -59,7 +54,7 @@ def collect_statistics_from_model(pths: str,
                             'result':result['acc'],
                             'acc':result['mean_acc']}
         
-        _, fine_acc_ts = eval.evaluate_accuracy(model, trainer, test_loader,config, data_info, var_comb, seasons, 'test')
+        _, fine_acc_ts = evaluate_accuracy(model, trainer, test_loader,config, data_info, var_comb, seasons, 'test')
         collective_acc_ts.append(fine_acc_ts)
 
 

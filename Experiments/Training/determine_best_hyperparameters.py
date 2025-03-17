@@ -32,6 +32,10 @@ cfd = os.path.dirname(os.path.abspath(__file__))
 config = yaml.load(open(f'{cfd}/config/loop_config{cfile}.yaml'), Loader=yaml.FullLoader)
 arch = 'ViT-LSTM/'
 
+config['net_root'] = str(cfd.parent.absolute()) + f'/Data/Network/'
+config['root'] = str(cfd.parent.absolute()) + f'/Data/Network/Sweeps/'
+config['data_root'] = str(cfd.parent.absolute()) + f'/Data'
+
 if 'Sweep' in config['root']:
     sweep = True
 strt_yr = config.get('strt','')

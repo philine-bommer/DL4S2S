@@ -18,7 +18,7 @@ config:
   regime_path: ''
   stack_maps: true
   strt: '1980'
-  test_set_name: 20CR
+  test_set_name: 20CRv3
   test_set_seasons:
   - 138
   - 139

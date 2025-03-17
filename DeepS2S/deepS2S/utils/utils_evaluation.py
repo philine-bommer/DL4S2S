@@ -16,9 +16,9 @@ import pandas as pd
 from datetime import datetime
 import matplotlib.pyplot as plt
 
-from DeepS2S.deepS2S.dataset.datasets_regimes import WeatherDataset
+from ..dataset.datasets_regimes import WeatherDataset
 
-import utils
+
 
 def balanced_accuracy(pds, tgs):
     ts = tgs.shape[1]

@@ -46,6 +46,7 @@ if __name__ == '__main__':
 
     config['net_root'] = str(cfd.parent.absolute()) + f'/Data/Network/'
     config['root'] = str(cfd.parent.absolute()) + f'/Data/Network/Sweeps/'
+    config['data_root'] = str(cfd.parent.absolute()) + f'/Data'
 
     num_mods = args.ntrials
 
@@ -120,36 +121,19 @@ if __name__ == '__main__':
                                                           device = device)
     
     # # Build model
-    # # Build encoder.
     strt_yr = config.get('strt','')
     trial_num = config.get('version', '')
     norm_opt = config.get('norm_opt','')
     name_var = config.get('tropics','')
-    Mae_tropics, Mae_u10 = build_encoder(config)
-    Mae_tropics = Mae_tropics.encoder
+    Mae_olr = None
+    enc_out_shape = None
+    Mae_u = None
+    enc_out_shape = None
 
-    if 'index' in config['var_comb']['input'][0]:
-        Mae_sst = None
-        enc_out_shape = None
-    else:    
-        Mae_sst = Mae_tropics.encoder
-
-    if 'index' in config['var_comb']['input'][1]:
-        Mae_u = None
-        enc_out_shape = None
-    else:
-        Mae_u = Mae_u10.encoder
-        
-    enc_path = config['net_root'] + f'MAE/version_{strt_yr}{trial_num}_{norm_opt}/individual_static/'
-    config_enc = yaml.load(open(f'{enc_path}config_u.yaml'), Loader=yaml.FullLoader)
-
-
-    config_enc_u = yaml.load(open(f'{enc_path}config_u.yaml'), Loader=yaml.FullLoader)
 
     model_params = dict(
         encoder_u = Mae_u,
-        encoder_sst = Mae_sst,
-        enc_out_shape =  [1,config_enc_u['vit']['dim']],
+        encoder_olr = Mae_olr,
         in_time_lag=config['data']['n_steps_in'],
         out_time_lag=config['data']['n_steps_out'],
         out_dim=data['val'][0][0][1].shape[-1],
@@ -161,8 +145,6 @@ if __name__ == '__main__':
         learning_rate = conv_params['learning_rate'],
         norm = conv_params['norm'],
         norm_bch = conv_params['norm_bch'],
-        add_attn = config['network'].get('add_attn', False),
-        n_heads = config['network'].get('n_heads',6),
         clbrt = config['network'].get('clbrt',0),
         ts_len = data['val'][0][0][1].shape[-1],)
     
@@ -226,10 +208,5 @@ if __name__ == '__main__':
     accuracy_ts = np.concatenate(acc_ts).reshape(num_mods,config['data']['n_steps_out'])
 
     print(f'Accuracy mean: {accuracy_ts.mean(axis=0)}, var: {accuracy_ts.std(axis=0)}')
-    if '_9cat' in config['var_comb']['input'][0]:
-        np.savez(f"{config['net_root']}Statistics/ViT/{vit_dir}/index-lstm_9cat_accuracy_{num_mods}model.npz", 
-             mean_acc = accuracy_ts.mean(axis=0), std_acc = accuracy_ts.std(axis=0), var_acc = accuracy_ts.var(axis=0), acc = accuracy_ts)
-
-    else:
-        np.savez(f"{config['net_root']}Statistics/ViT/{vit_dir}/index-lstm_accuracy_{num_mods}model.npz", 
+    np.savez(f"{config['net_root']}Statistics/ViT/{vit_dir}/index-lstm_accuracy_{num_mods}model.npz", 
              mean_acc = accuracy_ts.mean(axis=0), std_acc = accuracy_ts.std(axis=0), var_acc = accuracy_ts.var(axis=0), acc = accuracy_ts)

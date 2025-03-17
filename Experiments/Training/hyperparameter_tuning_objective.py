@@ -53,6 +53,10 @@ def objective_vit(trial: optuna.trial.Trial,
     cfd = exd.parent.absolute()
     config = yaml.load(open(f'{cfd}/config/loop_config{cfile}.yaml'), Loader=yaml.FullLoader)
 
+    config['net_root'] = str(cfd.parent.absolute()) + f'/Data/Network/'
+    config['root'] = str(cfd.parent.absolute()) + f'/Data/Network/Sweeps/'
+    config['data_root'] = str(cfd.parent.absolute()) + f'/Data'
+
     strt_yr = config.get('strt','')
     trial_num = config.get('version', '')
     norm_opt = config.get('norm_opt','')

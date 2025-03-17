@@ -45,6 +45,7 @@ if __name__ == '__main__':
 
     config['net_root'] = str(cfd.parent.absolute()) + f'/Data/Network/'
     config['root'] = str(cfd.parent.absolute()) + f'/Data/Network/Sweeps/'
+    config['data_root'] = str(cfd.parent.absolute()) + f'/Data'
 
     num_mods = config.get('num_m', 100)
 
@@ -125,7 +126,7 @@ if __name__ == '__main__':
     # Build model
     model_params = dict(
         encoder_u = Mae_u,
-        encoder_sst = Mae_sst,
+        encoder_olr = Mae_sst,
         enc_out_shape = [1,config_enc['vit']['dim']],
         in_time_lag=config['data']['n_steps_in'],
         out_time_lag=config['data']['n_steps_out'],

@@ -40,6 +40,7 @@ if __name__ == '__main__':
 
     config['net_root'] = str(cfd.parent.absolute()) + f'/Data/Network/'
     config['root'] = str(cfd.parent.absolute()) + f'/Data/Network/Sweeps/'
+    config['data_root'] = str(cfd.parent.absolute()) + f'/Data'
 
     
     strt_yr = config.get('strt','')
@@ -53,12 +54,7 @@ if __name__ == '__main__':
 
     var_comb = config['var_comb']
 
-    data_info, _ = statics_from_config(config)
-
-    seasons =  {'train':{config['data']['dataset_name2']:list(range(config['data']['fine']['train_start'], config['data']['fine']['train_end']))},
-        'val':{config['data']['dataset_name2']:list(range(config['data']['fine']['val_start'], config['data']['fine']['val_end']))},
-        'test':{config['data']['dataset_name2']:list(range(config['data']['fine']['test_start'], config['data']['fine']['test_end']))}}
-
+    data_info, seasons = statics_from_config(config)
 
     # Create data loader.
     params = {'seasons': seasons, 'test_set_name':config['data'][config['name']]['setname']}

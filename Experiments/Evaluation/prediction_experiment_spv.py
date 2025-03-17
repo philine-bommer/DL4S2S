@@ -11,13 +11,13 @@ import seaborn as sns
 
 import lightning.pytorch as pl
 
-import model.IndexLSTM as index_net
-import model.ViTLSTM as vit_net
+import deepS2S.model.IndexLSTM as index_net
+import deepS2S.model.ViTLSTM as vit_net
 
-from utils import statics_from_config
-from utils_data import generate_clim_pred, load_data
-from plot_utils import *
-import utils_evaluation as eval
+from deepS2S.utils.utils import statics_from_config
+from deepS2S.utils.utils_data import generate_clim_pred, load_data
+from deepS2S.utils.plot_utils import *
+import deepS2S.utils.utils_evaluation as eval
 
 # Set hyperparameters.
 
@@ -31,15 +31,13 @@ root_path = str(cfd.parent.absolute())+'/Data'
 data_path = f"{root_path}/"
 res_path = str(cfd.parent.absolute()) + f'/Data/Results/'
 
-smoothing = 7
-num_m = 14
 
 arch_types = ['Index_LSTM', 'LSTM', 'ViT']
 for arch_type in arch_types:
     if arch_type == 'ViT':
 
-            cfile = '_1980_olr'
-            config = yaml.load(open(f'{cfd}/config/convlstm_config{cfile}.yaml'), Loader=yaml.FullLoader)
+            cfile = '_vit_lstm'
+            config = yaml.load(open(f'{cfd}/config/config{cfile}.yaml'), Loader=yaml.FullLoader)
 
 
             strt_yr = config.get('strt','')
@@ -47,7 +45,6 @@ for arch_type in arch_types:
             norm_opt = config.get('norm_opt','')
             arch = config.get('arch', 'ViT')
             tropics = config.get('tropics', '')
-            temp_scaling = config.get('temp_scaling', False)
 
             stat_dir =  config['net_root'] + f'Statistics/{arch}'
             result_path = f'{res_path}/Statistics/{arch}/'
@@ -59,7 +56,7 @@ for arch_type in arch_types:
             architecture = vit_net.ViT_LSTM
             
     elif arch_type == 'LSTM':
-            cfile = '_1980_olr'
+            cfile = '_lstm'
             config = yaml.load(open(f'{cfd}/config/config{cfile}.yaml'), Loader=yaml.FullLoader)
 
 
@@ -68,7 +65,6 @@ for arch_type in arch_types:
             norm_opt = config.get('norm_opt','')
             arch = config.get('arch', 'ViT')
             tropics = config.get('tropics', '')
-            temp_scaling = config.get('temp_scaling', False)
 
             stat_dir =  config['net_root'] + f'Statistics/{arch_type}/'
             result_path = f'{res_path}Statistics/{arch_type}/'
@@ -79,16 +75,15 @@ for arch_type in arch_types:
             architecture = vit_net.ViT_LSTM
 
     else:
-            config = yaml.load(open(f'{cfd}/config/config_1980_index.yaml'), Loader=yaml.FullLoader)
+            config = yaml.load(open(f'{cfd}/config/config_index_lstm.yaml'), Loader=yaml.FullLoader)
 
-            config_base = yaml.load(open(f'{cfd}/config/config_1980_olr.yaml'), Loader=yaml.FullLoader)
+            config_base = yaml.load(open(f'{cfd}/config/config_vit_lstm.yaml'), Loader=yaml.FullLoader)
 
             strt_yr = config.get('strt','')
             trial_num = config.get('version', '')
             norm_opt = config.get('norm_opt','')
             arch = config.get('arch', 'ViT')
             tropics = config.get('tropics', '')
-            temp_scaling = config.get('temp_scaling', False)
 
 
             stat_dir =  config['net_root'] + f'Statistics/{arch_type}/'
@@ -103,25 +98,17 @@ for arch_type in arch_types:
 
     var_comb = config['var_comb']
 
-    data_info, _ = statics_from_config(config)
+    data_info, seasons = statics_from_config(config)
 
-    seasons =  {'train':{config['data']['dataset_name2']:list(range(config['data']['fine']['train_start'], config['data']['fine']['train_end']))},
-        'val':{config['data']['dataset_name2']:list(range(config['data']['fine']['val_start'], config['data']['fine']['val_end']))},
-        'test':{config['data']['dataset_name2']:list(range(config['data']['fine']['test_start'], config['data']['fine']['test_end']))}}
-    
     # Load collected data.
     exp_dir =  f"{stat_dir}version_{strt_yr}{trial_num}_{norm_opt}{tropics}/"
     pths = [xs for xs in Path(exp_dir).iterdir() if xs.is_dir()]
 
-    if temp_scaling:
-        data_collect = np.load(f'{results_directory}/collected_loop_data_{len(pths)-1}_temp_scale.npz')
-        data_result = np.load(f'{results_directory}/accuracy_{len(pths)-1}model_temp_scale.npz')
-    else:
-        data_collect = np.load(f'{results_directory}/collected_loop_data_{len(pths)-1}.npz')
-        data_result = np.load(f'{results_directory}/accuracy_{len(pths)-1}model.npz')
+    data_collect = np.load(f'{results_directory}/collected_loop_data_{len(pths)-1}.npz')
+    data_result = np.load(f'{results_directory}/accuracy_{len(pths)-1}model.npz')
         
     persistance = data_collect['persistance'] 
-    sst = data_collect['sst'] 
+    olr = data_collect['olr'] 
     u10 = data_collect['u10'] 
     dates = data_collect['dates'] 
     daytimes = data_collect['daytimes']
@@ -140,43 +127,16 @@ for arch_type in arch_types:
 
     input_reg = np.concatenate(input_reg).reshape((predictions_baseline.shape[0],
                                                             predictions_baseline.shape[1],4))
-    
-    # load climatology
-    dtset_name = config['data']['dataset_name2']
-
-    clim_prob = xr.load_dataarray(f'{data_path}{dtset_name}/climatology/NAE_{num_m}eofs_prob_{smoothing}days_climatology_1980_2009.nc')
-    predictions_clim = generate_clim_pred(clim_prob, dates)
-    predictions_clim_classes = np.argmax(predictions_clim, 2)
-
-    true_labels = targets.flatten()
-    lp_pr = loop_probabilities.reshape(loop_classes.shape[0],loop_classes.shape[1]*loop_classes.shape[2],loop_probabilities.shape[3])
-
-    confidences = np.zeros((loop_classes.shape[0],loop_classes.shape[1],loop_classes.shape[2]))
-    num_preds = loop_classes.shape[0]*loop_classes.shape[1]
-    for k in range(loop_probabilities.shape[0]):
-        for j in range(loop_probabilities.shape[1]):
-            for i in range(loop_probabilities.shape[2]):
-                confidences[k,j,i] = loop_probabilities[k, j, i, targets[j,i]]
-
     loop_targets = np.repeat(targets[None,:,:], loop_classes.shape[0], axis = 0)
 
-
-    confidences_flat = confidences.flatten()
-    q_all, q_90 = 90, 90
-
-
+    q_90 = 90
     # Build loop baselines
-
-    loop_clim = np.repeat(predictions_clim, loop_classes.shape[0],axis=0)
     loop_u10 = np.repeat(u10[None,...], loop_classes.shape[0],axis=0)
-    loop_sst = np.repeat(sst[None,...], loop_classes.shape[0],axis=0)
+    loop_olr = np.repeat(olr[None,...], loop_classes.shape[0],axis=0)
     loop_tgs = loop_targets.reshape(loop_classes.shape[0]*loop_classes.shape[1],loop_classes.shape[2])
     loop_cls = loop_classes.reshape(loop_classes.shape[0]*loop_classes.shape[1],loop_classes.shape[2])
     loop_prbs = loop_probabilities.reshape(loop_classes.shape[0]*loop_classes.shape[1],loop_classes.shape[2],loop_probabilities.shape[3])
 
-    loop_hps= loop_probabilities.reshape(loop_classes.shape[0]*loop_classes.shape[1]*loop_classes.shape[2],loop_probabilities.shape[3])[confidences_flat>q_90,:]
-    loop_clims = loop_clim.reshape(loop_classes.shape[0]*loop_classes.shape[1]*loop_classes.shape[2],loop_probabilities.shape[3])[confidences_flat>q_90,:]
-    loop_tgss = loop_targets.flatten()[confidences_flat>q_90]
 
     index_path = f'{data_path}Index'
     mjo_index = np.load(f'{index_path}/MJO_index_1980-2023_mjo_testset.npz')
@@ -196,60 +156,23 @@ for arch_type in arch_types:
     mjo_outputs = np.repeat(mjo_index_out[None,:,:], loop_classes.shape[0], axis = 0)
 
     lp_conf = loop_probabilities.flatten()
-    qall_90 = np.percentile(lp_conf,q_all)
-    conf_all_90 = []
+    qall_90 = np.percentile(lp_conf,q_90)
     pred_all_90 = []
     ts_all_90 = []
-    targ_all_90 = []
-    pv_all_90 = []
-    mjo_all_90 = []
 
-    acc_count =0
-    all_count =0
     for i in range(loop_probabilities.shape[0]):
         for j in range(loop_probabilities.shape[1]):
             for k in range(loop_probabilities.shape[2]):
                 for l in range(loop_probabilities.shape[3]):
                     if loop_probabilities[i,j,k,l] > qall_90: 
-                        conf_all_90.append(loop_probabilities[i,j,k,l])
-                        pv_all_90.append(pv_inputs[i,j,:])
-                        mjo_all_90.append(mjo_inputs[i,j,:])
                         ts_all_90.append(f'lead week {k+1}')
                         pred_all_90.append(l)
-                        targ_all_90.append(loop_targets[i,j,k])
 
-    conf_all_90 = np.array(conf_all_90)
     pred_all_90 = np.array(pred_all_90)
-    targ_all_90 = np.array(targ_all_90)
-    pv_all_90 = np.array(pv_all_90)
-    mjo_all_90 = np.array(mjo_all_90)
 
     lp_conf = loop_probabilities.flatten()
-    # q_all = 90
-    # qall_90 = np.percentile(lp_conf,q_all)
-
-    # input_reg_prob = input_reg
-    # input_reg = np.argmax(input_reg, axis = 2)
-
-    # occ_mjo = np.zeros((4,8))
-    # cnts_reg_in = np.zeros((4,))
-
-
-    # for i in range(loop_probabilities.shape[0]):
-    #     for j in range(loop_probabilities.shape[1]):
-    #         for k in range(loop_probabilities.shape[2]):
-
-    #             if not np.isnan(mjo_inputs[i,j,k]):
-    #                 cnts_reg_in[loop_targets[i,j,k]] += 1
-    #                 occ_mjo[loop_targets[i,j,k], int(mjo_inputs[i,j,k])-1] += 1
-
-
-    # unq_reg, cnts_reg = np.unique(targ_all_90, return_counts=True)
-    # unq_reg_pred, cnts_reg_pred = np.unique(loop_classes, return_counts=True)
-    # unq_mjo, cnts_mjo = np.unique(mjo_all_90, return_counts=True)
-    # cnts_mjo = cnts_mjo[:8]
-    # pred_reg = cnts_reg_pred/cnts_reg_pred.sum()
-    # clim_occ_mjo = occ_mjo/np.repeat(cnts_reg_in[:,None],8,axis=1)
+    q_all = 90
+    qall_90 = np.percentile(lp_conf,q_all)
     sum_spv_reg = np.zeros((4,1))
     cnts_reg_in  = np.zeros((4,1))
 
@@ -276,28 +199,6 @@ for arch_type in arch_types:
 
     t_in, t_out = pv_inputs.shape[2],loop_probabilities.shape[2]
 
-
-    pv_anom_reg_dt = []
-    pv_inp_reg_dt = []
-
-    for i in range(loop_probabilities.shape[0]): # number models
-        pv_reg_dt = np.zeros((4,t_in +t_out-1))
-        pv_inp_dt = np.zeros((4,t_in +t_out-1))
-        cnt_correct_dt = np.zeros((4,t_in +t_out-1))
-        for j in range(loop_probabilities.shape[1]): # number weeks/ samples
-            for k in range(loop_probabilities.shape[2]): # output timesteps
-                for t in range(pv_inputs.shape[2]): #input timesteps
-                    if not np.isnan(pv_inputs[i,j,t]):
-                        if loop_probabilities[i,j,k,loop_targets[i,j,k]] > qall_90: 
-                            d_t = np.abs((t-5)) + (k+1)
-                            cnt_correct_dt[loop_targets[i,j,k], d_t-1] += 1
-                            pv_reg_dt[loop_targets[i,j,k], d_t-1] += pv_anomalies[i,j,t]
-                            pv_inp_dt[loop_targets[i,j,k], d_t-1] += pv_inputs[i,j,t] #- avg_spv[loop_targets[i,j,k]]
-        pv_anom_reg_dt.append(pv_reg_dt[None,:,:]/cnt_correct_dt[None,:,:])
-        pv_inp_reg_dt.append(pv_inp_dt[None,:,:]/cnt_correct_dt[None,:,:])
-
-    pv_anom_reg_dt = np.concatenate(pv_anom_reg_dt)
-    pv_inp_reg_dt = np.concatenate(pv_inp_reg_dt)
 
     pv_anom_reg_t = []
     pv_inp_reg_t = []
@@ -326,7 +227,6 @@ for arch_type in arch_types:
 
     cm_list = sns.color_palette("colorblind")
     sns.set_palette("colorblind")
-
 
     data_pv = {}
     data_pv['regimes'] = pred_all_90

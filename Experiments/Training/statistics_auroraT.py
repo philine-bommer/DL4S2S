@@ -41,6 +41,8 @@ if __name__ == '__main__':
     root_path = str(cfd.parent.absolute())+'/Data/Embeddings/Aurora'
     data_path = f"{root_path}/"
 
+    config['data_root'] = str(cfd.parent.absolute()) + f'/Data'
+
     dataset_order = ['train', 'val', 'test']
     seasons = config['seasons']
     dataset_name = config['dataset_name']

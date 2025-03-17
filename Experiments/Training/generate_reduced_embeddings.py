@@ -19,7 +19,7 @@ sys.path.append(parent)
 
 import torch
 import torch.nn as nn
-import lightning
+
 import lightning.pytorch as pl
 
 
@@ -27,12 +27,9 @@ import lightning.pytorch as pl
 from aurora import AuroraSmall, Batch, Metadata, Aurora, rollout
 
 # DL packages.
-from dataset.dataset_embeddings import ImageDataset, EmbeddingDataset
-from dataset.datasets_wrapped import WeatherDataset
-from build_model import build_architecture, build_finetune
-from utils_data import cls_weights
-from utils_evaluation import evaluate_accuracy
-from utils import statics_from_config, get_params_from_best_model, get_params_from_model_obj 
+from deepS2S.dataset.dataset_embeddings import ImageDataset
+from deepS2S.dataset.datasets_wrapped import WeatherDataset
+from deepS2S.utils.utils import statics_from_config
 
 
 activations = {}
@@ -62,6 +59,8 @@ config = yaml.load(open(f'{cfd}/config/aurora_embeddings_config.yaml'), Loader=y
 pl.seed_everything(42)
 
 var_comb = config['var_comb']
+config['data_root'] = str(cfd.parent.absolute()) + f'/Data'
+
 
 data_info, _ = statics_from_config(config)
 data_info['config']['lon_trafo'] = config['data'].get('lon_trafo',False)

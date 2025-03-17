@@ -10,9 +10,8 @@ import yaml
 import torch
 import numpy as np
 import pdb
-from model import mae, ViT, StNN_index
-import model.StNN_static as stnn
-from utils_data import cls_weights
+from ..model import mae, ViT, ViTLSTM, IndexLSTM
+from .utils_data import cls_weights
 
 
 def build_architecture(name,
@@ -66,9 +65,9 @@ def build_architecture(name,
   
         if model_params.get('encoder_sst',0) or model_params.get('encoder_u',0):
             encoder = model_params['encoder_u']
-            encoder_D = model_params['encoder_sst']
+            encoder_D = model_params['encoder_olr']
             model_params['encoder_u'] = [] 
-            model_params['encoder_sst'] = [] 
+            model_params['encoder_olr'] = [] 
         else:
             encoder = None
             encoder_D = None
@@ -113,7 +112,7 @@ def build_architecture(name,
 
     if encoder_D or encoder:
         model_params['encoder_u'] = encoder
-        model_params['encoder_sst'] = encoder_D
+        model_params['encoder_olr'] = encoder_D
     model = architecture(**model_params)
     model.configure_optimizers()
     model.configure_loss()
@@ -324,32 +323,13 @@ def load_model(config, exp_dir, name, **params):
         result_collection = None
 
 
-    if 'spatiotemporal' in name:
-        architecture = getattr(stnn, name)
-        mae_sst, mae_u = build_encoder(config)
-        model = architecture.load_from_checkpoint(f"{hp_dir}/best_finetuned_model.ckpt", 
-                                                        encoder_u = mae_u.encoder,
+
+    architecture = getattr(ViTLSTM, name)
+    mae_sst, mae_u = build_encoder(config)
+    model = architecture.load_from_checkpoint(f"{hp_dir}/best_finetuned_model.ckpt", 
+                                                    encoder_u = mae_u.encoder,
                                                         encoder_sst = mae_sst.encoder, )
                                                     
-                
-    else:
-        with open(Path(cf_dir) / 'model_architecure.json', 'r') as f:
-            exp_info = json.load(f)
-        architecture = getattr(m, exp_info['name'])
-        if config['transfer']:
-            try:
-                model = architecture.load_from_checkpoint(f"{hp_dir}/best_finetuned_model.ckpt",  
-                                                        strict=False)
-            except:
-                model = architecture.load_from_checkpoint(f"{hp_dir}/best_finetuned_model.ckpt", 
-                                                    strict=False)
-        else:    
-            try:
-                model = architecture.load_from_checkpoint(f"{hp_dir}/best_model.ckpt", 
-                                                        strict=False)
-            except:
-                model = architecture.load_from_checkpoint(f"{hp_dir}/best_pretrained_model.ckpt", 
-                                                    strict=False)
     model.configure_optimizers()
     model.configure_loss()
     # print(model)
@@ -375,10 +355,10 @@ def load_multi_model(config, current_dir, name, **params):
         result_collection = None
 
     if "Index_LSTM" in log_dir:
-        architecture = getattr(StNN_index, name)
+        architecture = getattr(IndexLSTM, name)
 
     else:
-        architecture = getattr(stnn, name)
+        architecture = getattr(ViTLSTM, name)
 
     mae_sst, mae_u = build_encoder(config)
     if 'index' in config['var_comb']['input'][0]:

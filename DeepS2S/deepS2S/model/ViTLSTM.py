@@ -1,4 +1,4 @@
-import utils
+from ..utils import utils
 from typing import Any
 import pdb
 
@@ -68,11 +68,11 @@ class TimeDistributed(pl.LightningModule):
 ##### MULTIMODAL ViT-LSTM #####
 #############################
 class Encoder_ViT(nn.Module):
-    def __init__(self, encoder_sst, encoder_u, **params):
+    def __init__(self, encoder_olr, encoder_u, **params):
         """
         Initializes the Encoder_ViT class.
         Args:
-            encoder_sst: The encoder for sst.
+            encoder_olr: The encoder for olr.
             encoder_u: The encoder for u.
             **params: Additional parameters.
         Returns:
@@ -81,7 +81,7 @@ class Encoder_ViT(nn.Module):
         
         super(Encoder_ViT, self).__init__()
 
-        self.encoder_sst = encoder_sst
+        self.encoder_olr = encoder_olr
         self.encoder_u = encoder_u
         self.params = params
 
@@ -94,27 +94,27 @@ class Encoder_ViT(nn.Module):
 
     def forward(self, x_2d):
         """
-        Encodes the input images using the encoder networks for sea surface temperature (SST) and u-component of wind (u).
+        Encodes the input images using the encoder networks for sea surface temperature (olr) and u-component of wind (u).
         Args:
             x_2d (Tensor): Input images of shape (batch_size, sequence_length, channels, height, width).
         Returns:
-            Tuple[Tensor, Tensor]: Encoded representations of SST and u-component of wind, respectively.
+            Tuple[Tensor, Tensor]: Encoded representations of olr and u-component of wind, respectively.
                 The shape of each output tensor is (batch_size, sequence_length, encoded_dim).
         """
 
-        x_sst = x_2d[:,:,0,:,:]
+        x_olr = x_2d[:,:,0,:,:]
         x_u = x_2d[:,:,1,:,:]
 
         
         for t in range(x_2d.shape[1]):
             if t == 0:
-                x_enc_s = self.encoder_sst.encode(x_sst[:,None,t,...])
+                x_enc_s = self.encoder_olr.encode(x_olr[:,None,t,...])
                 x_enc_s = x_enc_s.reshape(x_enc_s.shape[0], -1)[:,None,...]
 
                 x_enc_u = self.encoder_u.encode(x_u[:,None,t,...])
                 x_enc_u = x_enc_u.reshape(x_enc_u.shape[0], -1)[:,None,...]
             else:
-                enc_s = self.encoder_sst.encode(x_sst[:,None,t,...]).reshape(x_enc_s.shape[0], -1)[:,None,...]
+                enc_s = self.encoder_olr.encode(x_olr[:,None,t,...]).reshape(x_enc_s.shape[0], -1)[:,None,...]
                 x_enc_s = torch.cat((x_enc_s, enc_s), dim=1)
 
                 enc_u = self.encoder_u.encode(x_u[:,None,t,...]).reshape(x_enc_u.shape[0], -1)[:,None,...]
@@ -152,7 +152,7 @@ class ViT_LSTM(pl.LightningModule):
 
     def __init__(self,
                  encoder_u,
-                 encoder_sst,
+                 encoder_olr,
                  enc_out_shape,
                  in_time_lag,
                  out_time_lag,
@@ -168,15 +168,11 @@ class ViT_LSTM(pl.LightningModule):
                  norm_both = False,
                  norm = True,
                  norm_bch = False,
-                 add_attn = False,
-                 n_heads = 3,
                  clbrt = False,
                  bs = 32,
                  gamma = {},
                  out_size = 4,
                  mode = 'run',
-                 scale = False,
-                 factor = 1, 
                  frame_size = (22, 256),
                  **params
             ):
@@ -205,7 +201,7 @@ class ViT_LSTM(pl.LightningModule):
         """
         super(ViT_LSTM, self).__init__()
 
-        self.save_hyperparameters(ignore=['encoder_u','encoder_sst'])
+        self.save_hyperparameters(ignore=['encoder_u','encoder_olr'])
 
         self.norm_both = norm_both
         self.norm_bch = norm_bch
@@ -217,21 +213,12 @@ class ViT_LSTM(pl.LightningModule):
         self.crit = criterion
         self.norm = norm
         self.out_size = out_size
-        self.add_attn = add_attn
-        self.attn_heads = n_heads
         self.clbrt = clbrt
         self.bs = bs
         self.gamma = gamma
         self.mode = mode
-        self.scale = scale
-        self.factor = factor
         self.frame_size = frame_size
-        if 'encoder' in mode:
-            print('Test encoder impact with random variables')
-        elif 'regimes' in mode:
-            print('Test regime impact with random variables')
-        if scale:
-            print('Upsample regimes!')
+
         
         if output_probabilities:
             self.output_activation = nn.Softmax(dim=2)
@@ -239,7 +226,7 @@ class ViT_LSTM(pl.LightningModule):
             self.output_activation = None
 
         self.encoder_u = encoder_u
-        self.encoder_sst = encoder_sst
+        self.encoder_olr = encoder_olr
         encoder_out_dim = enc_out_shape
 
         self.flatten = nn.Flatten()
@@ -253,28 +240,19 @@ class ViT_LSTM(pl.LightningModule):
         else:
             self.params = [] 
         
-        if add_attn:
-            self.multihead = nn.MultiheadAttention(encoder_out_dim[0] * 2 * encoder_out_dim[1] + out_dim, self.attn_heads, batch_first=True)
-            decoder_input_dim = encoder_out_dim[0] * 2 * encoder_out_dim[1] + out_dim
 
-        else: 
-            if 'base' in self.mode:
-                decoder_input_dim = in_time_lag * out_dim
-            else:
-                decoder_input_dim = 2*utils.prod(encoder_out_dim) + out_dim
-            
-            if self.scale:
-                self.upsample = nn.Linear(in_time_lag * out_dim, 2*utils.prod(encoder_out_dim))
-                decoder_input_dim = 2*2*utils.prod(encoder_out_dim)
-            
+        if 'base' in self.mode:
+            decoder_input_dim = in_time_lag * out_dim
+        else:
+            decoder_input_dim = 2*utils.prod(encoder_out_dim) + out_dim
+        
+        if self.scale:
+            self.upsample = nn.Linear(in_time_lag * out_dim, 2*utils.prod(encoder_out_dim))
+            decoder_input_dim = 2*2*utils.prod(encoder_out_dim)
+        
         
         self.decoder_input_dim =decoder_input_dim
-        if 'linear' in self.mode:
-            self.decoder = nn.Sequential(
-            TimeDistributed(nn.Linear(decoder_input_dim, self.out_size), batch_first=True, non_linear=False),
-            )
-        else:
-            self.decoder = nn.Sequential(
+        self.decoder = nn.Sequential(
                 nn.LSTM(input_size=decoder_input_dim, hidden_size=decoder_hidden_dim, batch_first=True),
                 TimeDistributed(nn.Linear(decoder_hidden_dim, self.out_size), batch_first=True)
             )
@@ -311,14 +289,7 @@ class ViT_LSTM(pl.LightningModule):
 
         x_enc_s, x_enc_u = self.encode_images(x_2d)
    
-        if 'sst' in self.mode:
-            x = x_enc_s
-        elif 'pv' in self.mode:
-            x = x_enc_u
-        elif 'raw' in self.mode:
-            x = x_2d.reshape(x_2d.shape[0],x_2d.shape[1],self.decoder_input_dim - self.out_size)
-        else:
-            x = torch.cat((x_enc_s, x_enc_u), dim=2)
+        x = torch.cat((x_enc_s, x_enc_u), dim=2)
         
         if self.norm: 
             # Min-Max norm  (x-x.min())/(x.max()-x.min()) 
@@ -473,40 +444,40 @@ class ViT_LSTM(pl.LightningModule):
     
     def freeze_encoder(self):
         """
-        Freezes the encoder by freezing the encoder_u and encoder_sst.
+        Freezes the encoder by freezing the encoder_u and encoder_olr.
 
         Returns:
             str: A message indicating that the encoder has been frozen.
         """
 
         self.encoder_u.freeze()
-        self.encoder_sst.freeze()
+        self.encoder_olr.freeze()
 
         return "Encoder frozen"
     
     def encode_images(self, x_2d):
         """
-        Encodes the input images using the encoder networks for sea surface temperature (SST) and u-component of wind (u).
+        Encodes the input images using the encoder networks for sea surface temperature (olr) and u-component of wind (u).
         Args:
             x_2d (Tensor): Input images of shape (batch_size, sequence_length, channels, height, width).
         Returns:
-            Tuple[Tensor, Tensor]: Encoded representations of SST and u-component of wind, respectively.
+            Tuple[Tensor, Tensor]: Encoded representations of olr and u-component of wind, respectively.
                 The shape of each output tensor is (batch_size, sequence_length, encoded_dim).
         """
 
-        x_sst = x_2d[:,:,0,:,:]
+        x_olr = x_2d[:,:,0,:,:]
         x_u = x_2d[:,:,1,:,:]
 
         
         for t in range(x_2d.shape[1]):
             if t == 0:
-                x_enc_s = self.encoder_sst.encode(x_sst[:,None,t,...])
+                x_enc_s = self.encoder_olr.encode(x_olr[:,None,t,...])
                 x_enc_s = x_enc_s.reshape(x_enc_s.shape[0], -1)[:,None,...]
 
                 x_enc_u = self.encoder_u.encode(x_u[:,None,t,...])
                 x_enc_u = x_enc_u.reshape(x_enc_u.shape[0], -1)[:,None,...]
             else:
-                enc_s = self.encoder_sst.encode(x_sst[:,None,t,...]).reshape(x_enc_s.shape[0], -1)[:,None,...]
+                enc_s = self.encoder_olr.encode(x_olr[:,None,t,...]).reshape(x_enc_s.shape[0], -1)[:,None,...]
                 x_enc_s = torch.cat((x_enc_s, enc_s), dim=1)
 
                 enc_u = self.encoder_u.encode(x_u[:,None,t,...]).reshape(x_enc_u.shape[0], -1)[:,None,...]

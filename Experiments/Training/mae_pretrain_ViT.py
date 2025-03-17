@@ -37,6 +37,8 @@ if __name__ == '__main__':
 
     config['net_root'] = str(cfd.parent.absolute()) + f'/Data/Network/'
     config['root'] = str(cfd.parent.absolute()) + f'/Data/Network/Sweeps/'
+    config['data_root'] = str(cfd.parent.absolute()) + f'/Data'
+
 
     pl.seed_everything(42)
 

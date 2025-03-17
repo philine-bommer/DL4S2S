@@ -1,7 +1,10 @@
 import os
 from math import log10, ceil, floor 
 import numpy as np
+import cartopy.crs as ccrs
 import matplotlib.pyplot as plt
+import seaborn as sns
+import xarray as xr
 
 
 def set_fig_size(width='thesis', width_fraction=1, subplots=(1, 1), subplot_fraction=1, ratio=None):

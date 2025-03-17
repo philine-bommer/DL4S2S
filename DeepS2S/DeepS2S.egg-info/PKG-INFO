@@ -1,0 +1,25 @@
+Metadata-Version: 2.2
+Name: DeepS2S
+Version: 1.0.0
+Summary: Package for DL-based S2S forecasting
+Home-page: https://github.com/philine-bommer/DL4S2S
+Author: Philine Bommer
+Author-email: pbommer@atb-potsdam.de
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE.exec
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: requires-python
+Dynamic: summary
+
+# deepS2S Package
+
+This package can be used to train and analyze different Deep Learning (DL) models for S2S prediction of European winter weather regimes.

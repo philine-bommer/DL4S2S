@@ -8,8 +8,8 @@ import numpy as np
 import pandas as pd
 from sklearn.utils import class_weight
 import matplotlib.pyplot as plt
-from utils import statics_from_config
-from dataset.datasets import TransferData, WeatherDataset
+from .utils import statics_from_config
+from ..dataset.datasets_regimes import TransferData, WeatherDataset
 
 
 def cls_weights(data,

@@ -15,17 +15,18 @@ class WeatherDataset(pl.LightningDataModule):
         self.lag = data_info['config'].get('n_steps_lag')
         self.n_in = data_info['config'].get('n_steps_in')
         self.n_out = data_info['config'].get('n_steps_out')
+        self.data_dir = data_info['config'].get('data_dir', '.../Data/')
         self.stack_maps = data_info['config'].get('stack_maps')
         self.regime_path = data_info['config'].get('regime_path','')
         self.data_path = data_info['config'].get('data_path','')
         self.strt = data_info['config'].get('strt','1950')
         self.seasons = seasons
         self.return_dates = return_dates
-        years = {'WeatherBench': '1979-2018', '20CR': '1836-1980', 'ERA5': '1950-2023'}[dataset_name]
+        years = {'WeatherBench': '1979-2018', '20CRv3': '1836-1980', 'ERA5': '1950-2023'}[dataset_name]
         if 'ERA' in dataset_name: 
             years = f'{self.strt}-2023'
         else:
-            years = {'WeatherBench': '1979-2018', '20CR': '1836-1980'}[dataset_name]
+            years = {'WeatherBench': '1979-2018', '20CRv3': '1836-1980'}[dataset_name]
 
         inputs = {'2d': {}, '1d': []}
         time_steps = set()
@@ -41,12 +42,12 @@ class WeatherDataset(pl.LightningDataModule):
                 resolution = info[var_name]['resolution']
                 pressure_level = info[var_name].get('pressure_level', '')
                 region = info[var_name]['region']
-                path = f'~/WiOSTNN/Version1/data/{dataset_name}/datasets/{self.regime_path}z_{pressure_level}_{resolution}deg_{years}_{region}_2d_NAEregimes.nc'
+                path = f'{self.data_dir}/{dataset_name}/datasets/{self.regime_path}z_{pressure_level}_{resolution}deg_{years}_{region}_2d_NAEregimes.nc'
             else:
                 resolution = info[var_name]['resolution']
                 pressure_level = info[var_name].get('pressure_level', '')
                 region = info[var_name]['region']
-                path = f'~/WiOSTNN/Version1/data/{dataset_name}/datasets/{self.data_path}{var_name}_{pressure_level}_{resolution}deg_{years}_{region}_{dimension}.nc'
+                path = f'{self.data_dir}/{dataset_name}/datasets/{self.data_path}{var_name}_{pressure_level}_{resolution}deg_{years}_{region}_{dimension}.nc'
 
 
             # check if variable is to be used as input or output

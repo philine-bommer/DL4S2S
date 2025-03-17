@@ -35,6 +35,9 @@ if __name__ == "__main__":
     config = yaml.load(open(f'{cfd}/config/loop_config{cfile}.yaml'), Loader=yaml.FullLoader)
     arch = 'ViT-LSTM/'
 
+    config['net_root'] = str(cfd.parent.absolute()) + f'/Data/Network/'
+    config['data_root'] = str(cfd.parent.absolute()) + f'/Data'
+
     strt_yr = config.get('strt','')
     trial_num = config.get('version', '')
     norm_opt = config.get('norm_opt','')

@@ -1,6 +1,9 @@
 from ftplib import FTP
 from argparse import ArgumentParser
 from pathlib import Path
+import os
+import yaml
+
 import xarray as xr
 
 ftp = FTP('ftp2.psl.noaa.gov')
@@ -13,6 +16,10 @@ parser.add_argument("--vrbl", type=str, default='pressure')
 args = parser.parse_args()
 
 vrbl = args.vrbl
+exd = os.path.dirname(os.path.abspath(__file__))
+cfd = Path(exd).parent.absolute()
+
+root = str(cfd.parent.absolute())
 
 
 # Download files 1980 - 2015.
@@ -75,9 +82,9 @@ filenames = ftp.nlst() # get filenames within the directory
 filenames = [filename for filename in filenames if filename.endswith('.nc') and filename.startswith(var)]
 
 # check out path.
-out_path = Path(f'../Data/20CRv3/raw/{var}')
+out_path = Path(f'{root}/Data/20CRv3/raw/{var}')
 if vrbl == 'olr':
-    out_path = Path(f'./raw/{vrbl}')
+    out_path = Path(f'{root}/Data/20CRv3/raw//{vrbl}')
 out_path.mkdir(parents=True, exist_ok=True)
 
 # check exsisting files.

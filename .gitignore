@@ -50,8 +50,7 @@ Thumbs.db
 
 # Folders #
 ######################
-**/Version1/data/ERA5/cdo-2.3.0/*
+**/Data
 **/lightning_logs
-**/FashionMNIST
 **/__pycache__
 **/.ipynb_checkpoints

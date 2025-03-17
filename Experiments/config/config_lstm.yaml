@@ -26,7 +26,7 @@ data:
   resolution: 1.40625
   test_set_name: 'ERA5'
   pre:
-    setname: '20CR'
+    setname: '20CRv3'
     test_start: 138
     test_end: 145
     train_start: 0 
@@ -45,7 +45,7 @@ data:
   lag: 0
   n_steps_out: 6
   m_days: 7
-  dataset_name1: '20CR'
+  dataset_name1: '20CRv3'
   dataset_name2: 'ERA5'
   bs: 36
 network:

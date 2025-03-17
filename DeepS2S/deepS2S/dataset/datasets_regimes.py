@@ -13,6 +13,7 @@ import lightning as pl
 class WeatherDataset(pl.LightningDataModule):
     def __init__(self, dataset_name, data_info, var_comb, seasons=None, return_dates=False):
         self.lag = data_info['config'].get('n_steps_lag')
+        self.data_dir = data_info['config'].get('data_dir', '.../Data')
         self.n_in = data_info['config'].get('n_steps_in')
         self.n_out = data_info['config'].get('n_steps_out')
         self.m_days = data_info['config'].get('mean_days','7')
@@ -25,11 +26,11 @@ class WeatherDataset(pl.LightningDataModule):
         self.lon_trafo = data_info['config'].get('lon_trafo', False)
         self.seasons = seasons
         self.return_dates = return_dates
-        years = {'WeatherBench': '1979-2018', '20CR': '1836-1980', 'ERA5': '1950-2023'}[dataset_name]
+        years = {'WeatherBench': '1979-2018', '20CRv3': '1836-1980', 'ERA5': '1950-2023'}[dataset_name]
         if 'ERA' in dataset_name: 
             years = f'{self.strt}-2023'
         else:
-            years = {'WeatherBench': '1979-2018', '20CR': '1836-1980'}[dataset_name]
+            years = {'WeatherBench': '1979-2018', '20CRv3': '1836-1980'}[dataset_name]
         
         key_list = []
         for key in data_info['vars'].keys(): 
@@ -60,18 +61,18 @@ class WeatherDataset(pl.LightningDataModule):
                 resolution = info['resolution']
                 pressure_level = info.get('pressure_level', '')
                 region = info['region']
-                path = f'~/WiOSTNN/Version1/data/{dataset_name}/datasets/{self.regime_path}z_{pressure_level}_{resolution}deg_{years}_{region}_2d_NAEregimes.nc'
+                path = f'{self.data_dir}/{dataset_name}/datasets/{self.regime_path}z_{pressure_level}_{resolution}deg_{years}_{region}_2d_NAEregimes.nc'
                 print(path)
             elif 'index' in var_name:
                 resolution = info['resolution']
                 pressure_level = info.get('pressure_level', '')
                 region = info['region']
-                path =  f"~/WiOSTNN/Version1/data/{dataset_name}/datasets/{var_name}_{years}_{dataset_name}_s.nc"
+                path =  f"{self.data_dir}/{dataset_name}/datasets/{var_name}_{years}_{dataset_name}.nc"
             else:
                 resolution = info['resolution']
                 pressure_level = info.get('pressure_level', '')
                 region = info['region']
-                path = f'~/WiOSTNN/Version1/data/{dataset_name}/datasets/{self.data_path}{var_name}_{pressure_level}_{resolution}deg_{years}_{region}_{dimension}.nc'
+                path = f'{self.data_dir}/{dataset_name}/datasets/{self.data_path}{var_name}_{pressure_level}_{resolution}deg_{years}_{region}_{dimension}.nc'
 
 
             # check if variable is to be used as input or output

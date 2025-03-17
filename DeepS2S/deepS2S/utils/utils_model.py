@@ -16,14 +16,14 @@ import pdb
 import lightning.pytorch as pl
 
 
-from model import mae, ViT
-import model.StNN_static as m
+from ..model import mae, ViT, ViTLSTM
+# from ..model as m
 # import model.StNN_static as stnn
-from DeepS2S.deepS2S.utils.utils_build import build_encoder
-from utils_data import cls_weights
-from utils_evaluation import evaluate_accuracy
-from utils import statics_from_config
-from DeepS2S.deepS2S.dataset.datasets_regimes import TransferData, WeatherDataset
+from .utils_build import build_encoder
+from .utils_data import cls_weights
+from .utils_evaluation import evaluate_accuracy
+from .utils import statics_from_config
+from ..dataset.datasets_regimes import TransferData, WeatherDataset
 
 
 def load_single_model(config, hp_dir, cf_dir, architecture):
@@ -49,7 +49,7 @@ def load_single_model(config, hp_dir, cf_dir, architecture):
     else:
         with open(Path(cf_dir) / 'model_architecure.json', 'r') as f:
             exp_info = json.load(f)
-        architecture = getattr(m, exp_info['name'])
+        architecture = getattr(ViTLSTM, exp_info['name'])
         if "transfer" in config['setting_training']:
             try:
                 model = architecture.load_from_checkpoint(f"{hp_dir}/best_finetuned_model.ckpt",  

@@ -89,6 +89,7 @@ def statics_from_config(config:  dict):
 
     data_info[ 'config'] = {'regime_path':config['data'].get('regime_path',''),
             'data_path':config['data'].get('data_path',''),
+            'data_dir':config['data_root'],
             'strt':config.get('strt',''),
             'mean_days':config['data'].get('m_days',7),    
             'n_steps_in': config['data']['n_steps_in'],

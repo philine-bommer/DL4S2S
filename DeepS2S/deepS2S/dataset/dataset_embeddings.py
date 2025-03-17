@@ -40,6 +40,7 @@ class ImageDataset(pl.LightningDataModule):
         self.return_dates = params.get('return_dates', False)
         self.combine_test = params.get('combine_test',False)
         self.var_comb = var_comb
+        self.data_dir = params.get('data_dir', '.../Data/')
         self.return_dates = params.get('return_dates', False)
         self.t_len = params.get('t_len', 6)
         self.lon_360 = params.get('lon_tarfo', True)
@@ -50,7 +51,7 @@ class ImageDataset(pl.LightningDataModule):
 
         self.dataset= dataset
         self.get_images()
-        download_path = params.get('path',Path("/mnt/beegfs/home/bommer1/WiOSTNN/Version1/data/ERA5/datasets/"))
+        download_path = params.get('path',Path(f"{self.data_dir}/ERA5/datasets/"))
 
         self.statics = xr.open_dataarray(download_path / "static_regrid_northern_hemi.nc", engine="netcdf4")
         if self.lon_360:
@@ -158,7 +159,7 @@ class EmbeddingDataset(pl.LightningDataModule):
         self.regime_path = data_info['config'].get('regime_path','')
         self.data_path = data_info['config'].get('data_path','')
         self.strt = data_info['config'].get('strt','1950')
-        self.nae_path = data_info['config'].get('nae_path',f'WiOSTNN/Version1/data/{dataset_name}/datasets/')
+        self.nae_path = data_info['config'].get('nae_path',f'.../Data/{dataset_name}/datasets/')
         self.multiple = data_info['config'].get('multiple', True)
         self.seasons = seasons
         self.embed = data_info['config'].get('embed',2)
@@ -166,7 +167,7 @@ class EmbeddingDataset(pl.LightningDataModule):
         if 'ERA' in dataset_name: 
             years = f'{self.strt}-2023'
         else:
-            years = {'20CR': '1836-1980'}[dataset_name]
+            years = {'20CRv3': '1836-1980'}[dataset_name]
       
 
         inputs = {}
