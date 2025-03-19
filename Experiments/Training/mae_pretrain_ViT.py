@@ -1,12 +1,14 @@
 import os
 import yaml
 from argparse import ArgumentParser
+from pathlib import Path
 
 
 import torch
 from torch import dropout, nn, utils
 import torch.optim as optim
 import numpy as np
+import pdb
 
 # DL packages.
 import lightning.pytorch as pl
@@ -32,14 +34,14 @@ if __name__ == '__main__':
 
     # Load config and settings.
     exd = os.path.dirname(os.path.abspath(__file__))
-    cfd = exd.parent.absolute()
+    cfd = Path(exd).parent.absolute()
     config = yaml.load(open(f'{cfd}/config/config_pretrain{cfile}.yaml'), Loader=yaml.FullLoader)
-
+    
     config['net_root'] = str(cfd.parent.absolute()) + f'/Data/Network/'
     config['root'] = str(cfd.parent.absolute()) + f'/Data/Network/Sweeps/'
     config['data_root'] = str(cfd.parent.absolute()) + f'/Data'
 
-
+ 
     pl.seed_everything(42)
 
     var_comb = config['var_comb']
@@ -70,6 +72,7 @@ if __name__ == '__main__':
     'config':{
         'regime_path':config['data'].get('regime_path',''),
         'data_path':config['data'].get('data_path',''),
+        'data_dir':config['data_root'],
         'strt':config.get('strt',''),
         'n_steps_in': config['data']['n_steps_in'],
         'n_steps_lag': config['data']['lag'],
@@ -116,7 +119,7 @@ if __name__ == '__main__':
         data_info['var_comb'] = var_comb
 
         # Set up models args.
-        encoder = vit.ViT(image_size = tuple(frame_size),
+        encoder = vit(image_size = tuple(frame_size),
                         patch_size = tuple(config['vit']['patch_size']),
                         num_classes = config['vit']['num_classes'],
                         dim = config['vit']['dim'],
@@ -150,6 +153,7 @@ if __name__ == '__main__':
                                 max_epochs=config['epochs'], 
                                 default_root_dir=log_dir, 
                                 deterministic=True,
+                                strategy='ddp_find_unused_parameters_true',
                                 callbacks=[early_stop_callback],)
 
 

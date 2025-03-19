@@ -1,7 +1,7 @@
 import os
 import yaml
 from argparse import ArgumentParser
-import shutil
+from pathlib import Path
 
 
 import pdb
@@ -35,7 +35,7 @@ if __name__ == '__main__':
 
     # Load data.
     exd = os.path.dirname(os.path.abspath(__file__))
-    cfd = exd.parent.absolute()
+    cfd = Path(exd).parent.absolute()
     config = yaml.unsafe_load(open(f'{cfd}/config/config_aurora_T.yaml'))
 
     root_path = str(cfd.parent.absolute())+'/Data/Embeddings/Aurora'

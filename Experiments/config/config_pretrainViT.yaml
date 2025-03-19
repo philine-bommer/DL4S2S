@@ -54,7 +54,7 @@ vit:
   - 16
 mae:
   decoder_depth: 6
-  decoder_dim: 128
+  decoder_dim: 32
   masking_ratio: 0.75
 logistic: ''
 network:

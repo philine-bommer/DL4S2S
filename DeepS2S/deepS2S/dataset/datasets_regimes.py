@@ -62,7 +62,6 @@ class WeatherDataset(pl.LightningDataModule):
                 pressure_level = info.get('pressure_level', '')
                 region = info['region']
                 path = f'{self.data_dir}/{dataset_name}/datasets/{self.regime_path}z_{pressure_level}_{resolution}deg_{years}_{region}_2d_NAEregimes.nc'
-                print(path)
             elif 'index' in var_name:
                 resolution = info['resolution']
                 pressure_level = info.get('pressure_level', '')

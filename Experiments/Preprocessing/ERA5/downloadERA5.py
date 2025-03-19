@@ -1,6 +1,7 @@
 import cdsapi
 from argparse import ArgumentParser
 import os
+from pathlib import Path
 
 
 # set variable downloaded from the ERA5
@@ -10,9 +11,13 @@ parser.add_argument("--vrbl", type=str, default='pressure')
 args = parser.parse_args()
 
 vrbl = args.vrbl
+exd = os.path.dirname(os.path.abspath(__file__))
+cfd = Path(exd).parent.absolute()
+
+root = str(Path(cfd.parent.absolute()).parent.absolute())
 
 c = cdsapi.Client()
-target_folder = '../Data/ERA5/raw/'
+target_folder = f'{root}/Data/ERA5/raw/'
 
 if 'olr' in vrbl:
     years=['1980', '1981', '1982',
@@ -31,7 +36,7 @@ if 'olr' in vrbl:
                 '2019', '2020', '2021',
                 '2022', '2023',]
     for yrs in years:
-        if not os.path.exists(f'./raw/olr_northern/olr_{yrs}.nc'): 
+        if not os.path.exists(f'{target_folder}/olr/olr_{yrs}.nc'): 
             c.retrieve(
             'reanalysis-era5-single-levels',
             {
@@ -65,11 +70,11 @@ if 'olr' in vrbl:
                         180,
                     ],
                 },
-                f'{target_folder}/olr_north_7m/olr_{yrs}.nc')
+                f'{target_folder}/olr_north/olr_{yrs}.nc')
 
 
 elif 'pressure' in vrbl:
-    if not os.path.exists(f'./raw/geopotential_z500.nc'):
+    if not os.path.exists(f'{target_folder}/geopotential_z500.nc'):
         dataset = 'reanalysis-era5-pressure-levels'
         request = {
                 'product_type': 'reanalysis',
@@ -125,7 +130,7 @@ elif 'pressure' in vrbl:
             f'{target_folder}geopotential_z500.nc')
 
 elif 'wind' in vrbl:
-    if not os.path.exists(f'./raw/uwind_10.nc'):
+    if not os.path.exists(f'{target_folder}/uwind_10.nc'):
         c.retrieve(
             'reanalysis-era5-pressure-levels',
             {

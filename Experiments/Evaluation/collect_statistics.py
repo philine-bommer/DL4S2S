@@ -94,8 +94,9 @@ bhp_dir, cf_dir, _ = best_model_folder(config_base, exp_dir, architecture, **par
 acc_base, model_baseline, _, _, _, _, _, _ = test_model_and_data(config_base, bhp_dir, cf_dir, architecture, [1])
 
 trainer = pl.Trainer(accelerator="gpu",
-                     devices = [3],
+                    devices = [3],
                     max_steps=200, 
+                    strategy='ddp_find_unused_parameters_true',
                     default_root_dir= results_directory, 
                     deterministic=True)
 

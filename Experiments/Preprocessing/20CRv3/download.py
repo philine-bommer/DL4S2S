@@ -19,7 +19,7 @@ vrbl = args.vrbl
 exd = os.path.dirname(os.path.abspath(__file__))
 cfd = Path(exd).parent.absolute()
 
-root = str(cfd.parent.absolute())
+root = str(Path(cfd.parent.absolute()).parent.absolute())
 
 
 # Download files 1980 - 2015.
@@ -39,9 +39,9 @@ ftp.cwd(directory)
 filenames = ftp.nlst() # get filenames within the directory
 filenames = [filename for filename in filenames if filename.endswith('.nc') and filename.startswith(var)]
 
-out_path = Path(f'../Data/20CRv3/raw/{var}')
+out_path = Path(f'{root}/Data/20CRv3/raw/{var}')
 if vrbl == 'olr':
-    out_path = Path(f'./raw/{vrbl}')
+    out_path = Path(f'{root}/Data/20CRv3/raw/{vrbl}')
 out_path.mkdir(parents=True, exist_ok=True)
 
 

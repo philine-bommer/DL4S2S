@@ -196,7 +196,6 @@ class MAE(pl.LightningModule):
         img = input
         if img.ndim > 4:
             img =  img[:,0,:,:,:]
-        print(img.shape)
         pred_pixel_values, masked_patches = self.forward(img)
         # calculate reconstruction loss
         recon_loss = F.mse_loss(pred_pixel_values, masked_patches)

@@ -2,6 +2,7 @@ import os
 import yaml
 from argparse import ArgumentParser
 import shutil
+from pathlib import Path
 
 import torch
 import pdb
@@ -41,7 +42,7 @@ if __name__ == '__main__':
 
     # Load config and settings.
     exd = os.path.dirname(os.path.abspath(__file__))
-    cfd = exd.parent.absolute()
+    cfd = Path(exd).parent.absolute()
     config = yaml.load(open(f'{cfd}/config/config_1980_index.yaml'), Loader=yaml.FullLoader)
 
     config['net_root'] = str(cfd.parent.absolute()) + f'/Data/Network/'
@@ -179,6 +180,7 @@ if __name__ == '__main__':
                                         check_val_every_n_epoch=5,
                                         default_root_dir=log_dir, 
                                         deterministic=True,
+                                        strategy='ddp_find_unused_parameters_true',
                                         callbacks=[StochasticWeightAveraging(swa_lrs=conv_params['swa']),
                                                 early_stop_callback],)
             

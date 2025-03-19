@@ -2,6 +2,7 @@ import os
 import yaml
 import json
 from argparse import ArgumentParser
+from pathlib import Path
 
 import numpy as np
 
@@ -35,7 +36,7 @@ if __name__ == '__main__':
 
     # Load config and settings.
     exd = os.path.dirname(os.path.abspath(__file__))
-    cfd = exd.parent.absolute()
+    cfd = Path(exd).parent.absolute()
     config = yaml.load(open(f'{cfd}/config/config{cfile}.yaml'), Loader=yaml.FullLoader)
 
     config['net_root'] = str(cfd.parent.absolute()) + f'/Data/Network/'

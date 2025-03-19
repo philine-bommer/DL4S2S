@@ -161,6 +161,7 @@ def objective_vit(trial: optuna.trial.Trial,
                 max_epochs=config['epochs'],
                 accelerator="gpu" ,
                 devices=config['devices'],
+                strategy='ddp_find_unused_parameters_true',
                 callbacks=[StochasticWeightAveraging(swa_lrs=swa), early_stop_callback],
                 )
     
