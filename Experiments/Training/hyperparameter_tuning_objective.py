@@ -21,16 +21,10 @@ from torch import optim, utils, nn
 
 # HP tuning package.
 import optuna
-from optuna.integration import PyTorchLightningPruningCallback
-
-# Functions from py-files.
-# from deepS2S.model.temporalViT import TemporalTransformerModel
-# from deepS2S.dataset.dataset_embeddings import EmbeddingDataset
-# from deepS2S.utils.utils_train import compute_class_weights, training, accuracy_per_timestep
 
 from deepS2S.model import ViTLSTM
 from deepS2S.model.loss import FocalLossAdaptive
-from deepS2S.dataset.datasets_wrapped import TransferData
+from deepS2S.dataset.datasets_regimes import TransferData
 from deepS2S.utils.utils_build import build_architecture_sweep, build_encoder
 from deepS2S.utils.utils_data import cls_weights
 from deepS2S.utils.utils_evaluation import evaluate_accuracy
@@ -42,7 +36,7 @@ def objective_vit(trial: optuna.trial.Trial,
 
     
     parser = ArgumentParser()
-    parser.add_argument("--config", type=str, default='_1980_olr')
+    parser.add_argument("--config", type=str, default='_hps')
     parser.add_argument("--network", type=str, default='conv')
     parser.add_argument("--ntrials", type=int, default=100)
     args = parser.parse_args()
@@ -50,7 +44,7 @@ def objective_vit(trial: optuna.trial.Trial,
     cfile = args.config
     # Load config and settings.
     exd = os.path.dirname(os.path.abspath(__file__))
-    cfd = exd.parent.absolute()
+    cfd = Path(exd).parent.absolute() 
     config = yaml.load(open(f'{cfd}/config/loop_config{cfile}.yaml'), Loader=yaml.FullLoader)
 
     config['net_root'] = str(cfd.parent.absolute()) + f'/Data/Network/'
@@ -78,8 +72,6 @@ def objective_vit(trial: optuna.trial.Trial,
 
 
     #Initialize static variables.
-    setting_training = config['setting_training']
-
     device = torch.device("cuda")
     optimizer =  optim.Adam
     if 'calibrated' in norm_opt:
@@ -113,8 +105,8 @@ def objective_vit(trial: optuna.trial.Trial,
     data_info['var_comb'] = var_comb
 
     # Build encoder.
-    Mae_sst, Mae_u = build_encoder(config)
-    Mae_sst = Mae_sst.encoder
+    Mae_olr, Mae_u = build_encoder(config)
+    Mae_olr = Mae_olr.encoder
     Mae_u = Mae_u.encoder
     enc_path = config['net_root'] + f'MAE/version_{strt_yr}{trial_num}_{norm_opt}/individual_static/'
     config_enc = yaml.load(open(f'{enc_path}config_u.yaml'), Loader=yaml.FullLoader)
@@ -129,7 +121,7 @@ def objective_vit(trial: optuna.trial.Trial,
      
     model_params = dict(
         encoder_u = Mae_u,
-        encoder_sst = Mae_sst,
+        encoder_olr = Mae_olr,
         enc_out_shape = [1,config_enc['vit']['dim']],
         in_time_lag=config['data']['n_steps_in'],
         out_time_lag=config['data']['n_steps_out'],
@@ -165,7 +157,7 @@ def objective_vit(trial: optuna.trial.Trial,
                 callbacks=[StochasticWeightAveraging(swa_lrs=swa), early_stop_callback],
                 )
     
-    model, exp_info = build_architecture_sweep(name=f'exp_transfer_doublenorm_{architecture.__name__}_{"-".join(var_comb["input"])}',
+    model, exp_info = build_architecture_sweep(name=f'{architecture.__name__}_{"-".join(var_comb["input"])}',
                     architecture = architecture,
                     model_params = model_params,
                     data = data_info,
@@ -184,10 +176,9 @@ def objective_vit(trial: optuna.trial.Trial,
     model_params['lr_fine'] = learning_rate
     model_params['swa'] = swa
     model_params['bs'] = batch_size
-    model_params['grad_clip_pre'] = gc_pre
     model_params['grad_clip_fine'] = gc_fine
     model_params['encoder_u'] = []
-    model_params['encoder_sst'] = []
+    model_params['encoder_olr'] = []
 
     trainer_fine.logger.log_hyperparams(model_params) #only if trainer logger = False
 
@@ -198,7 +189,7 @@ def objective_vit(trial: optuna.trial.Trial,
 
     val_results = trainer_fine.validate(dataloaders=Fine_data.val_dataloader(), ckpt_path=f"{trainer_fine.logger.log_dir}/best_model.ckpt")
 
-    val_ac, val_acc_ts = evaluate_accuracy(model, trainer_fine, Fine_data.val_dataloader(),
+    val_ac, _ = evaluate_accuracy(model, trainer_fine, Fine_data.val_dataloader(),
                                     config, data_info, var_comb, seasons, 'val')
 
 

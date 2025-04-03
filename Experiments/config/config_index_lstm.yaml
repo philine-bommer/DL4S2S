@@ -7,8 +7,8 @@ version: ''
 enc: '_static'
 arch: 'ViT/'
 setting_training: "fine"
-tropic_folder: 'version_5/best_model_olr'
-u_folder: 'version_3/best_model_u'
+tropic_folder: 'version_1/best_model_olr'
+u_folder: 'version_0/best_model_u'
 exp_type: 'index'
 transfer: 1
 devices: 1

@@ -28,7 +28,7 @@ from aurora import AuroraSmall, Batch, Metadata, Aurora, rollout
 
 # DL packages.
 from deepS2S.dataset.dataset_embeddings import ImageDataset
-from deepS2S.dataset.datasets_wrapped import WeatherDataset
+from deepS2S.dataset.datasets_regimes import WeatherDataset
 from deepS2S.utils.utils import statics_from_config
 
 
@@ -53,7 +53,7 @@ def _get_activation(name: str):
 
 # Load config and settings.
 exd = os.path.dirname(os.path.abspath(__file__))
-cfd = exd.parent.absolute()
+cfd = Path(exd).parent.absolute() 
 config = yaml.load(open(f'{cfd}/config/aurora_embeddings_config.yaml'), Loader=yaml.FullLoader)
 
 pl.seed_everything(42)
@@ -98,6 +98,7 @@ for keys in dataset_order:
                     )
 
     params['return_dates'] = True
+    params['path'] = Path(str(cfd.parent.absolute()) + f'/Data/ERA5/datasets/')
     params['lon_trafo'] = config['data'].get('lon_trafo', False)
     images[keys] = ImageDataset(data, config['data']['dataset_name2'], 
                             var_comb, data = None, **params)

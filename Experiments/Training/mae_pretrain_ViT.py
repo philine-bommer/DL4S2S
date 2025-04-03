@@ -147,7 +147,7 @@ if __name__ == '__main__':
                                             min_delta=0.00, patience=3, verbose=True, mode="min")
 
             # Build Trainer.
-        trainer_pre = pl.Trainer(accelerator=args.accelerator,
+        trainer = pl.Trainer(accelerator=args.accelerator,
                                 devices=[0,1],
                                 check_val_every_n_epoch=10,  
                                 max_epochs=config['epochs'], 
@@ -175,10 +175,10 @@ if __name__ == '__main__':
         
         # Run Training.
         var_name = combinations['input'][0]
-        trainer_pre.fit(mae, Pre_data)
+        trainer.fit(mae, Pre_data)
 
-        trainer_pre.save_checkpoint(f"{trainer_pre.logger.log_dir}/best_model_{var_name}.ckpt")
-        trainer_pre.test(dataloaders=test_loader, ckpt_path=f"{trainer_pre.logger.log_dir}/best_model_{var_name}.ckpt")
+        trainer.save_checkpoint(f"{trainer.logger.log_dir}/best_model_{var_name}.ckpt")
+        trainer.test(dataloaders=test_loader, ckpt_path=f"{trainer.logger.log_dir}/best_model_{var_name}.ckpt")
 
 
         config['loaded_pars'] = model_params

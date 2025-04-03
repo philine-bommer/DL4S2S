@@ -2,6 +2,7 @@ import os
 import yaml
 from argparse import ArgumentParser
 import shutil
+from pathlib import Path
 
 import torch
 import pdb
@@ -17,7 +18,7 @@ from lightning.pytorch.callbacks import StochasticWeightAveraging, EarlyStopping
 
 from deepS2S.model import ViTLSTM
 from deepS2S.model.loss import FocalLossAdaptive
-from deepS2S.dataset.datasets_wrapped import TransferData
+from deepS2S.dataset.datasets_regimes import TransferData
 from deepS2S.utils.utils_build import build_architecture, build_encoder
 from deepS2S.utils.utils_data import cls_weights
 from deepS2S.utils.utils_evaluation import evaluate_accuracy, numpy_predict
@@ -40,7 +41,7 @@ if __name__ == '__main__':
 
     # Load config and settings.
     exd = os.path.dirname(os.path.abspath(__file__))
-    cfd = exd.parent.absolute()
+    cfd = Path(exd).parent.absolute()
     config = yaml.load(open(f'{cfd}/config/config_lstm.yaml'), Loader=yaml.FullLoader)
 
     config['net_root'] = str(cfd.parent.absolute()) + f'/Data/Network/'
@@ -60,11 +61,11 @@ if __name__ == '__main__':
 
 
     config['root'] = config['root'] + f"{ntype}/"
-    config['arch'] = ''
+    config['arch'] = 'ViT-LSTM'
     architecture = ViTLSTM.ViT_LSTM
     conv_params = get_params_from_best_model(config, 'spatiotemporal')
 
-
+    config['arch'] = ''
     var_comb = config['var_comb']
 
     data_info, seasons = statics_from_config(config)

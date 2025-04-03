@@ -169,7 +169,7 @@ def get_params_from_best_model(config:  dict,
     strt_yr = config.get('strt','')
     trial_num = config.get('version', '')
     norm_opt = config.get('norm_opt','')
-    arch = config.get('arch','')
+    arch = config.get('arch','ViT-LSTM/')
     name_var = config.get('tropics','')   
     exp_dir =  config['root'] + f'{arch}Sweep_{strt_yr}{trial_num}_{norm_opt}{name_var}/'
     
@@ -183,26 +183,7 @@ def get_params_from_best_model(config:  dict,
     hps = yaml.load(open(hp_dir / 'hparams.yaml'), Loader=yaml.UnsafeLoader)
     conv_params = {}
   
-    if 'Conv' in architecure:
-        conv_params['decoder_hidden_dim'] = hps['decoder_hidden_dim']
-        conv_params['learning_rate'] = hps['learning_rate']
-        conv_params['dropout'] = hps['dropout']
-        conv_params['weight_decay'] = hps['weight_decay']
-        conv_params['lrs'] = hps['lr_fine']
-        conv_params['encoder_num_layers'] = hps['encoder_num_layers']
-        conv_params['hidden_dim'] = hps['hidden_dim']
-        conv_params['norm_both'] = hps['norm_both']
-        conv_params['norm_bch'] = hps['norm_bch']
-        conv_params['norm'] = hps['norm']
-        conv_params['output_probabilities'] = hps['output_probabilities']
-        conv_params['swa'] = hps['swa']
-        conv_params['bs'] = hps['bs']
-        conv_params['gamma'] = hps['gamma']
-        conv_params['gc_fine'] = hps['grad_clip_fine']
-        conv_params['gc_pre'] = hps['grad_clip_pre']
-
-    elif 'spatiotemporal' in architecure:
-
+    if 'spatiotemporal' in architecure:
         conv_params['decoder_hidden_dim'] = hps['decoder_hidden_dim']
         conv_params['learning_rate'] = hps['learning_rate']
         conv_params['dropout'] = hps['dropout']
@@ -252,7 +233,7 @@ def get_params_from_model_obj(config:  dict,
     trial_num = config.get('version', '')
     norm_opt = config.get('norm_opt','')
     name_var = config.get('tropics','') 
-    arch = config.get('arch','')  
+    arch = config.get('arch','ViT-LSTM/')  
     exp_dir =  config['root'] + f'{arch}Sweep_{strt_yr}{trial_num}_{norm_opt}{name_var}/'
   
     try : 
@@ -263,7 +244,7 @@ def get_params_from_model_obj(config:  dict,
 
     hp_dir = con_res.get("test_dir",0)
     hps = yaml.load(open(hp_dir / 'hparams.yaml'), Loader=yaml.UnsafeLoader)
-    model = architecture.load_from_checkpoint(f"{hp_dir}/best_finetuned_model.ckpt", 
+    model = architecture.load_from_checkpoint(f"{hp_dir}/best_model.ckpt", 
                                                       cls_wgt = hps['cls_wgt'], 
                                                       strict=False)
 
@@ -287,20 +268,7 @@ def get_params_from_model_obj(config:  dict,
                 conv_params['lrs'] = hps['lr_fine']
 
     else:
-        if 'Conv' in architecture.__name__:
-            conv_params = {}
-            conv_params['norm_both'] = config['network']['norm_both']
-            conv_params['weight_decay'] = config['network']['weight_decay']
-            conv_params['decoder_hidden_dim'] = config['network']['decoder_hidden_dim']
-            conv_params['dropout'] = config['network']['dropout']
-            conv_params['learning_rate'] = config['network']['learning_rate']
-            conv_params['norm'] = config['network']['norm']
-            conv_params['norm_bch'] = config['network']['norm_bch']
-            conv_params['lrs'] = config['network']['lrs']
-            conv_params['swa'] = config['network']['swa']
-            conv_params['bs'] = config['data']['bs']
-
-        elif 'spatiotemporal' in architecture.__name__:
+        if arch == 'ViT-LSTM/':
             conv_params = {}
             conv_params['norm_both'] = config['network']['norm_both']
             conv_params['weight_decay'] = config['network']['weight_decay']

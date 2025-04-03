@@ -63,7 +63,7 @@ def build_architecture(name,
             model_params['weight_decay'] = args.weight_decay
         model_params['optim'] = [] 
   
-        if model_params.get('encoder_sst',0) or model_params.get('encoder_u',0):
+        if model_params.get('encoder_olr',0) or model_params.get('encoder_u',0):
             encoder = model_params['encoder_u']
             encoder_D = model_params['encoder_olr']
             model_params['encoder_u'] = [] 
@@ -137,7 +137,7 @@ def build_finetune(data,
     model = architecture.load_from_checkpoint(f"{trainer.logger.log_dir}/best_pretrained_model.ckpt", **kwargs,strict=False)
     model.configure_optimizers()
     model.configure_loss()
-    if kwargs.get('encoder_sst',0) or kwargs.get('encoder_u',0):
+    if kwargs.get('encoder_olr',0) or kwargs.get('encoder_u',0):
         model.freeze_encoder()
     # model.load_from_checkpoint(f"{trainer.logger.log_dir}/best_pretrained_model.ckpt")
 
@@ -154,8 +154,6 @@ def build_architecture_sweep(name,
                           batch_size,
                           trainer,
                           n_instances=1,
-                        #   print_freq=50,
-                        #   initial_weights=None,
                           ):
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -164,11 +162,11 @@ def build_architecture_sweep(name,
 
     target_dir = f'{trainer.logger.log_dir}/{name}/{name}_{datetime.now().strftime("%Y-%m-%dT%H-%M")}'
 
-    if model_params.get('encoder_sst',0) and model_params.get('encoder_u',0):
+    if model_params.get('encoder_olr',0) and model_params.get('encoder_u',0):
         encoder = model_params['encoder_u']
-        encoder_D = model_params['encoder_sst']
+        encoder_D = model_params['encoder_olr']
         model_params['encoder_u'] = [] 
-        model_params['encoder_sst'] = [] 
+        model_params['encoder_olr'] = [] 
     # else:
     # model_params['hidden_dim'] = model_params['hidden_dim']
     # model_params['encoder_num_layers'] = model_params['encoder_num_layers']
@@ -210,7 +208,7 @@ def build_architecture_sweep(name,
     
     if encoder_D or encoder:
         model_params['encoder_u'] = encoder
-        model_params['encoder_sst'] = encoder_D
+        model_params['encoder_olr'] = encoder_D
     model = architecture(**model_params)
     model.configure_optimizers()
     model.configure_loss()
@@ -231,7 +229,7 @@ def build_encoder(config):
 
 
     config_enc = yaml.load(open(f'{enc_path}config_u.yaml'), Loader=yaml.FullLoader)
-    encoder = ViT.ViT(image_size = tuple(config_enc['loaded_pars']['frame_size']),
+    encoder = ViT(image_size = tuple(config_enc['loaded_pars']['frame_size']),
                       patch_size = tuple(config_enc['vit']['patch_size']),
                       num_classes = config_enc['vit']['num_classes'],
                       dim = config_enc['vit']['dim'],
@@ -257,7 +255,6 @@ def build_encoder(config):
         decoder_depth = config_enc['mae']['decoder_depth']       # anywhere from 1 to 8
     )
     
-    # encoder = Mae.load_from_checkpoint(f"{enc_path}lightning_logs/version_1/best_model.ckpt")
     tropic_folder = config['tropic_folder']
     u_folder = config['u_folder']
     checkpoint_sst = torch.load(f"{enc_path}lightning_logs/{tropic_folder}.ckpt", map_location=lambda storage, loc: storage)
@@ -328,7 +325,7 @@ def load_model(config, exp_dir, name, **params):
     mae_sst, mae_u = build_encoder(config)
     model = architecture.load_from_checkpoint(f"{hp_dir}/best_finetuned_model.ckpt", 
                                                     encoder_u = mae_u.encoder,
-                                                        encoder_sst = mae_sst.encoder, )
+                                                        encoder_olr = mae_sst.encoder, )
                                                     
     model.configure_optimizers()
     model.configure_loss()
@@ -373,7 +370,7 @@ def load_multi_model(config, current_dir, name, **params):
 
     model = architecture.load_from_checkpoint(f"{hp_dir}/best_model.ckpt", 
                                                     encoder_u = mae_u,
-                                                    encoder_sst = mae_sst, )
+                                                    encoder_olr = mae_sst, )
                                                     
                 
     model.configure_optimizers()
@@ -420,7 +417,7 @@ def load_multi_model(config, current_dir, name, **params):
 
 #     model = architecture.load_from_checkpoint(f"{hp_dir}/best_model.ckpt", 
 #                                                     encoder_u = mae_u,
-#                                                     encoder_sst = mae_sst,)  
+#                                                     encoder_olr = mae_sst,)  
 #                                                     # cls_wgt = cls_wgt_hp,#params['cls_wgt'], 
 #                                                     # strict=False)
 #     checkpoint = torch.load(f"{hp_dir}/best_model.ckpt")

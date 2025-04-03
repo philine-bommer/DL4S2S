@@ -34,36 +34,14 @@ def load_single_model(config, hp_dir, cf_dir, architecture):
     except FileNotFoundError:
         result_collection = None
 
-    if 'spatiotemporal' in architecture.__name__:
-        # architecture = getattr(stnn, name)
-        mae_sst, mae_u = build_encoder(config)
-        if "transfer" in config['setting_training']:
-            model = architecture.load_from_checkpoint(f"{hp_dir}/best_finetuned_model.ckpt", 
-                                                            encoder_u = mae_u.encoder,
-                                                            encoder_sst = mae_sst.encoder, )
-        else:
-            model = architecture.load_from_checkpoint(f"{hp_dir}/best_model.ckpt", 
-                                                            encoder_u = mae_u.encoder,
-                                                            encoder_sst = mae_sst.encoder, )                                           
+    mae_olr, mae_u = build_encoder(config)
+
+    model = architecture.load_from_checkpoint(f"{hp_dir}/best_model.ckpt", 
+                                                        encoder_u = mae_u.encoder,
+                                                        encoder_olr = mae_olr.encoder, )                                           
                 
-    else:
-        with open(Path(cf_dir) / 'model_architecure.json', 'r') as f:
-            exp_info = json.load(f)
-        architecture = getattr(ViTLSTM, exp_info['name'])
-        if "transfer" in config['setting_training']:
-            try:
-                model = architecture.load_from_checkpoint(f"{hp_dir}/best_finetuned_model.ckpt",  
-                                                        strict=False)
-            except:
-                model = architecture.load_from_checkpoint(f"{hp_dir}/best_finetuned_model.ckpt", 
-                                                    strict=False)
-        else:    
-            try:
-                model = architecture.load_from_checkpoint(f"{hp_dir}/best_model.ckpt", 
-                                                        strict=False)
-            except:
-                model = architecture.load_from_checkpoint(f"{hp_dir}/best_pretrained_model.ckpt", 
-                                                    strict=False)
+
+
     model.configure_optimizers()
     model.configure_loss()
     
@@ -113,9 +91,7 @@ def test_model(config, pat, architecture, dev):
     data_info, seasons = statics_from_config(config)
 
 
-    test_loader, val_loader, _, _, _, _ = get_data(config, seasons, var_comb, data_info)
-
-    pl.seed_everything(42)
+    test_loader, val_loader, data, cls_wt, test_set, data_set = get_data(config, seasons, var_comb, data_info)
 
     trainer = pl.Trainer(logger = False,
                         accelerator="gpu",
@@ -124,7 +100,7 @@ def test_model(config, pat, architecture, dev):
                         # default_root_dir= results, 
                         deterministic=True)
     
-    test_loader, val_loader = get_data(config, seasons, var_comb, data_info)
+    # test_loader, val_loader = get_data(config, seasons, var_comb, data_info)
 
     test_acc, test_acc_ts = evaluate_accuracy(model, trainer, test_loader,
                                               config, data_info, var_comb, seasons, 'test')

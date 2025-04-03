@@ -30,7 +30,7 @@ if __name__ == "__main__":
     ntr = args.ntrials
     # Load config and settings.
     exd = os.path.dirname(os.path.abspath(__file__))
-    cfd = exd.parent.absolute()
+    cfd = Path(exd).parent.absolute() 
 
     config = yaml.load(open(f'{cfd}/config/loop_config{cfile}.yaml'), Loader=yaml.FullLoader)
     arch = 'ViT-LSTM/'

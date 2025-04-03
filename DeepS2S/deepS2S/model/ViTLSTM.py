@@ -1,4 +1,3 @@
-from ..utils import utils
 from typing import Any
 import pdb
 
@@ -12,6 +11,7 @@ from torch import nn
 import lightning as pl
 from sklearn.metrics import balanced_accuracy_score
 from torchmetrics.classification import MulticlassCalibrationError
+from ..utils.utils import prod
 
 " Functions from .py files"
 # from ViT import pair
@@ -244,11 +244,7 @@ class ViT_LSTM(pl.LightningModule):
         if 'base' in self.mode:
             decoder_input_dim = in_time_lag * out_dim
         else:
-            decoder_input_dim = 2*utils.prod(encoder_out_dim) + out_dim
-        
-        if self.scale:
-            self.upsample = nn.Linear(in_time_lag * out_dim, 2*utils.prod(encoder_out_dim))
-            decoder_input_dim = 2*2*utils.prod(encoder_out_dim)
+            decoder_input_dim = 2*prod(encoder_out_dim) + out_dim
         
         
         self.decoder_input_dim =decoder_input_dim
@@ -295,21 +291,21 @@ class ViT_LSTM(pl.LightningModule):
             # Min-Max norm  (x-x.min())/(x.max()-x.min()) 
             # -> i.e. range [0,1] for both
             x = (x-x.min())/(x.max()-x.min())
+
+        if 'base' in self.mode:
+            x = x_1d.reshape(x_1d.shape[0], -1).unsqueeze(1).repeat(1, self.out_time_lag, 1)
         else:
-            if 'base' in self.mode:
-                x = x_1d.reshape(x_1d.shape[0], -1).unsqueeze(1).repeat(1, self.out_time_lag, 1)
-            else:
-                x = torch.cat((x, x_1d), dim=2)
+            x = torch.cat((x, x_1d), dim=2)
 
-                if self.norm_both: 
-                    # Standardize joint vectors: (x - x.mean())/x.std()
-                    x = (x - x.mean())/x.std() 
-            
-            x_enc = x
+            if self.norm_both: 
+                # Standardize joint vectors: (x - x.mean())/x.std()
+                x = (x - x.mean())/x.std() 
+        
+        x_enc = x
 
-        self.encoded_input_data = x_enc
-        if x_enc.requires_grad:
-            x_enc.retain_grad()
+        if not self.encoded_input_data.requires_grad:
+            self.encoded_input_data.requires_grad = True
+            self.encoded_input_data.retain_grad()
         x_enc = self.norm_layer(x_enc)
         x_enc = self.dropout(x_enc) 
         x= self.decoder(x_enc)

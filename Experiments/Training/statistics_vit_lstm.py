@@ -116,17 +116,17 @@ if __name__ == '__main__':
                                                           device = device)
 
     # Build encoder.
-    Mae_sst, Mae_u = build_encoder(config)
+    Mae_olr, Mae_u = build_encoder(config)
     enc_path = config['net_root'] + f'MAE/version_{strt_yr}{trial_num}_{norm_opt}/individual_static/'
     config_enc = yaml.load(open(f'{enc_path}config_u.yaml'), Loader=yaml.FullLoader)
-    Mae_sst = Mae_sst.encoder
+    Mae_olr = Mae_olr.encoder
     Mae_u = Mae_u.encoder
     
     
     # Build model
     model_params = dict(
         encoder_u = Mae_u,
-        encoder_olr = Mae_sst,
+        encoder_olr = Mae_olr,
         enc_out_shape = [1,config_enc['vit']['dim']],
         in_time_lag=config['data']['n_steps_in'],
         out_time_lag=config['data']['n_steps_out'],

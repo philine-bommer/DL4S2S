@@ -11,8 +11,8 @@ devices: [1]
 loop_dev: [0,1,2,3]
 norm_opt: 'calibrated'
 tropics: '_olr'
-tropic_folder: 'version_5/best_model_olr'
-u_folder: 'version_3/best_model_u'
+tropic_folder: 'version_1/best_model_olr'
+u_folder: 'version_0/best_model_u'
 var_comb: {'input': ['olr', 'u', 'nae_regimes'], 'output': ['nae_regimes']}
 name: 'pre'
 percent_valid: 0.35
