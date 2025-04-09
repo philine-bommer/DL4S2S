@@ -194,7 +194,7 @@ class Index_LSTM(pl.LightningModule):
                  weight_decay,
                  cls_wgt,
                  criterion,
-                encoder_u = None,
+                 encoder_u = None,
                  encoder_olr = None,
                  out_dim=1,
                  dropout=0.0,
@@ -276,12 +276,12 @@ class Index_LSTM(pl.LightningModule):
     
     def forward(self, x_2d, x_1d):
 
-        x = x_1d[:,:,:self.out_size -1]
+        x_enc = x_1d.reshape(x_1d.shape[0], self.out_time_lag , self.ts_len)
 
         
-        x = x_1d.reshape(x_1d.shape[0], -1).unsqueeze(1).repeat(1, self.out_time_lag, 1)
+        # x = x_1d.reshape(x_1d.shape[0], -1).unsqueeze(1).repeat(1, self.out_time_lag, 1)
 
-        x_enc = x
+        # x_enc = x
 
         x= self.decoder(x_enc)
         x = torch.squeeze(x)

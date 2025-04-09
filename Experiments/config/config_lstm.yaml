@@ -12,7 +12,7 @@ tropics: '_olr'
 tropic_folder: 'version_1/best_model_olr'
 u_folder: 'version_0/best_model_u'
 transfer: 0
-devices: 1
+devices: [2,3]
 norm_opt: 'calibrated'
 var_comb: {'input': ['olr', 'u', 'nae_regimes'], 'output': ['nae_regimes']}
 name: 'fine'

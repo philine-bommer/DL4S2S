@@ -7,12 +7,6 @@ from pathlib import Path
 import numpy as np
 
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score
-from sklearn.metrics import f1_score
-from sklearn.metrics import precision_score
-from sklearn.metrics import recall_score
-from sklearn.utils import shuffle
-from sklearn.datasets import make_classification
 from sklearn.utils import class_weight
 
 from deepS2S.dataset.datasets import PlainData
@@ -24,7 +18,7 @@ if __name__ == '__main__':
     parser = ArgumentParser()
 
     # add PROGRAM level args
-    parser.add_argument("--config", type=str, default='_1980_olr')
+    parser.add_argument("--config", type=str, default='_vit_lstm')
     parser.add_argument("--ntrials", type=int, default=100)
 
     args = parser.parse_args()
@@ -125,6 +119,8 @@ if __name__ == '__main__':
 
     accuracy_ts = np.concatenate(acc_ts).reshape(num_mods,config['data']['n_steps_out'])
 
+    if not os.path.exists(f"{target_dir}{vit_dir}"):
+        os.makedirs(f"{target_dir}{vit_dir}")
     print(f'Accuracy mean: {accuracy_ts.mean(axis=0)}, var: {accuracy_ts.var(axis=0)}')
-    np.savez(f"{config['net_root']}Statistics/ViT/{vit_dir}/logisticRegression_accuracy_{num_mods}model.npz", 
+    np.savez(f"{target_dir}{vit_dir}logisticRegression_accuracy_{num_mods}model.npz", 
              mean_acc = accuracy_ts.mean(axis=0), std_acc = accuracy_ts.std(axis=0), var_acc = accuracy_ts.var(axis=0), acc = accuracy_ts)

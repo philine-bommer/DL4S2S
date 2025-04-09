@@ -177,6 +177,7 @@ class WeatherDataset(pl.LightningDataModule):
                         self.shapes['input'].append((self.n_in, 1, lat, lon))
 
         # compute number of samples
+        
         assert len(time_steps) == 1, 'All variables must have the same number of time steps'
         self.n_samples_per_season = {}
         for season in self.seasons:

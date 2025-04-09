@@ -302,7 +302,7 @@ class ViT_LSTM(pl.LightningModule):
                 x = (x - x.mean())/x.std() 
         
         x_enc = x
-
+        self.encoded_input_data = x_enc
         if not self.encoded_input_data.requires_grad:
             self.encoded_input_data.requires_grad = True
             self.encoded_input_data.retain_grad()

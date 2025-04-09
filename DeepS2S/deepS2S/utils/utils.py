@@ -112,6 +112,7 @@ def individual_timestep(data):
 
     outputs = []
     inputs = []
+
     for i in range(len(data)):
 
         ins, outs = data[i][0], data[i][1].numpy()
@@ -183,7 +184,7 @@ def get_params_from_best_model(config:  dict,
     hps = yaml.load(open(hp_dir / 'hparams.yaml'), Loader=yaml.UnsafeLoader)
     conv_params = {}
   
-    if 'spatiotemporal' in architecure:
+    if 'ViT' in architecure:
         conv_params['decoder_hidden_dim'] = hps['decoder_hidden_dim']
         conv_params['learning_rate'] = hps['learning_rate']
         conv_params['dropout'] = hps['dropout']
@@ -194,9 +195,7 @@ def get_params_from_best_model(config:  dict,
         gamma['val'] = 3
         gamma['nurmeric'] = True
         conv_params['gc_fine'] = hps['grad_clip_fine']
-        conv_params['gc_pre'] = hps['grad_clip_pre']
 
-        # conv_params['hidden_dim'] = hps['hidden_dim']
         conv_params['norm_both'] = hps['norm_both']
         conv_params['norm_bch'] = hps['norm_bch']
         conv_params['norm'] = hps['norm']
@@ -213,7 +212,6 @@ def get_params_from_best_model(config:  dict,
         conv_params['swa'] = hps['swa']
         conv_params['gamma'] = hps['gamma']
         conv_params['gc_fine'] = hps['grad_clip_fine']
-        conv_params['gc_pre'] = hps['grad_clip_pre']
 
     return conv_params
 
@@ -283,7 +281,6 @@ def get_params_from_model_obj(config:  dict,
             conv_params['swa'] = config['network']['swa']
             conv_params['bs'] = config['data']['bs']
             conv_params['gc_fine'] = hps['grad_clip_fine']
-            conv_params['gc_pre'] = hps['grad_clip_pre']
 
         else: 
             conv_params = {}

@@ -2,12 +2,16 @@ from datetime import datetime, timedelta
 
 import numpy as np
 import xarray
-import pdb
+import sys
+import os
+
+current = os.path.dirname(os.path.realpath(__file__))
+parent = os.path.dirname(current)
+sys.path.append(parent)
 
 import torch
 from torch.utils.data import DataLoader
 import lightning as pl
-
 from deepS2S.utils import utils
 
 # ToDo: Change to (batch size, TS, h, w)  and only one input,  and (6,1) output
@@ -17,18 +21,17 @@ class WeatherDataset(pl.LightningDataModule):
         self.lag = data_info['config'].get('n_steps_lag')
         self.n_in = data_info['config'].get('n_steps_in')
         self.n_out = data_info['config'].get('n_steps_out')
-        self.data_dir = data_info['config'].get('data_dir', '.../Data/')
         self.stack_maps = data_info['config'].get('stack_maps')
         self.regime_path = data_info['config'].get('regime_path','')
         self.data_path = data_info['config'].get('data_path','')
         self.strt = data_info['config'].get('strt','1950')
         self.seasons = seasons
         self.return_dates = return_dates
-        years = {'WeatherBench': '1979-2018', '20CRv3': '1836-1980', 'ERA5': '1950-2023'}[dataset_name]
+        years = {'WeatherBench': '1979-2018', '20CR': '1836-1980', 'ERA5': '1950-2023'}[dataset_name]
         if 'ERA' in dataset_name: 
             years = f'{self.strt}-2023'
         else:
-            years = {'WeatherBench': '1979-2018', '20CRv3': '1836-1980'}[dataset_name]
+            years = {'WeatherBench': '1979-2018', '20CR': '1836-1980'}[dataset_name]
 
         inputs = {'2d': {}, '1d': []}
         time_steps = set()
@@ -44,12 +47,12 @@ class WeatherDataset(pl.LightningDataModule):
                 resolution = info[var_name]['resolution']
                 pressure_level = info[var_name].get('pressure_level', '')
                 region = info[var_name]['region']
-                path = f'{self.data_dir}/{dataset_name}/datasets/{self.regime_path}z_{pressure_level}_{resolution}deg_{years}_{region}_2d_NAEregimes.nc'
+                path = f'~/WiOSTNN/Version1/data/{dataset_name}/datasets/{self.regime_path}z_{pressure_level}_{resolution}deg_{years}_{region}_2d_NAEregimes.nc'
             else:
                 resolution = info[var_name]['resolution']
                 pressure_level = info[var_name].get('pressure_level', '')
                 region = info[var_name]['region']
-                path = f'{self.data_dir}/{dataset_name}/datasets/{self.data_path}{var_name}_{pressure_level}_{resolution}deg_{years}_{region}_{dimension}.nc'
+                path = f'~/WiOSTNN/Version1/data/{dataset_name}/datasets/{self.data_path}{var_name}_{pressure_level}_{resolution}deg_{years}_{region}_{dimension}.nc'
 
 
             # check if variable is to be used as input or output
@@ -130,13 +133,13 @@ class WeatherDataset(pl.LightningDataModule):
         season_idx = np.digitize(idx, self.n_samples_per_season_accumulated)    
         season = self.seasons[season_idx]
         idx = idx - self.n_samples_per_season_accumulated[season_idx-1] if season_idx > 0 else idx
-        in_idxs = [idx]
-        out_idxs = [idx]
+        in_idxs = [idx + i*7 for i in range(self.n_in)]
+        out_idxs = [idx + (self.n_in + self.lag + i) * 7 for i in range(self.n_out)]
         
         data = self.inputs
         data = [data.sel(time=data.season == season).isel(time=in_idxs).values]
 
-        inpts = np.expand_dims(np.squeeze(np.stack(data, axis=1)),axis= 0)
+        inpts = np.squeeze(np.stack(data, axis=1))
         inputs = torch.tensor(inpts, dtype=torch.float32)
 
         output_slice = self.output.sel(time=self.output.season == season).isel(time=out_idxs)
@@ -296,3 +299,66 @@ class SingleData(pl.LightningDataModule):
     def access_dataset(self):
         return self.dataset
     
+class PlainData(torch.utils.data.Dataset):
+
+    def __init__(self, dataset_name, var_comb, data = None, batchsize = 32, **params):
+        
+        super(PlainData, self).__init__()
+        
+        self.name = dataset_name
+        self.bs = batchsize
+        self.dataset = {'train': [], 'val': [],'test': []}
+        self.seasons = params.get('seasons',None) 
+        self.return_dates = params.get('return_dates', False)
+        self.combine_test = params.get('combine_test',False)
+        self.var_comb = var_comb
+        if data is None: 
+            raise Exception("Weather variable need to be specified")
+        else:
+            self.data = data
+    
+    def train_data(self):
+        data = WeatherDataset(
+                    dataset_name=self.name,
+                    data_info=self.data,
+                    var_comb=self.var_comb,
+                    seasons=self.seasons['train'][self.name]
+                )
+        # pdb.set_trace()
+        # inputs = data.inputs['1d']
+        # outputs = data.output
+        x_train , y_train = utils.individual_timestep(data)
+        self.dataset['train'] = [x_train, y_train]
+        return x_train , y_train
+    
+    def val_data(self):
+        data = WeatherDataset(
+                    dataset_name=self.name,
+                    data_info=self.data,
+                    var_comb=self.var_comb,
+                    seasons=self.seasons['val'][self.name]
+                )
+        # inputs = data.inputs['1d']
+        # outputs = data.output
+        # pdb.set_trace()
+        x_val , y_val = utils.individual_timestep(data)
+        self.dataset['val'] = [x_val, y_val]
+        return x_val , y_val
+    
+    def test_data(self):
+        data = WeatherDataset(
+                    dataset_name=self.name,
+                    data_info=self.data,
+                    var_comb=self.var_comb,
+                    seasons=self.seasons['test'][self.name]
+                )
+        # inputs = data.inputs['1d']
+        # outputs = data.output
+        # pdb.set_trace()
+        x_test , y_test = utils.individual_timestep(data)
+        self.dataset['test'] = [x_test , y_test]
+        return x_test , y_test
+    
+
+    def access_dataset(self):
+        return self.dataset

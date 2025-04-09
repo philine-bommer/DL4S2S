@@ -1,7 +1,7 @@
 import os
 import yaml
 from argparse import ArgumentParser
-import shutil
+from pathlib import Path
 
 import torch
 import pdb
@@ -16,7 +16,7 @@ from lightning.pytorch.callbacks import StochasticWeightAveraging, EarlyStopping
 
 from deepS2S.model import ViTLSTM
 from deepS2S.model.loss import FocalLossAdaptive
-from deepS2S.dataset.datasets_wrapped import TransferData
+from deepS2S.dataset.datasets_regimes import TransferData
 from deepS2S.utils.utils_build import build_architecture, build_encoder
 from deepS2S.utils.utils_data import cls_weights
 from deepS2S.utils.utils_evaluation import evaluate_accuracy, numpy_predict
@@ -30,8 +30,8 @@ if __name__ == '__main__':
     parser.add_argument("--notification_email", type=str, default="pbommer@atb-potsdam.de")
     parser.add_argument("--accelerator", default="gpu")
     parser.add_argument("--devices", default=1)
-    parser.add_argument("--config", type=str, default='_1980_olr')
-    parser.add_argument("--network", type=str, default='ViT')
+    parser.add_argument("--config", type=str, default='_hps')
+    parser.add_argument("--network", type=str, default='ViT-LSTM')
     parser.add_argument("--ntrials", type=int, default=100)
 
     args = parser.parse_args()
@@ -40,7 +40,7 @@ if __name__ == '__main__':
 
     # Load config and settings.
     exd = os.path.dirname(os.path.abspath(__file__))
-    cfd = exd.parent.absolute()
+    cfd = Path(exd).parent.absolute()
     config = yaml.load(open(f'{cfd}/config/loop_config{cfile}.yaml'), Loader=yaml.FullLoader)
 
     config['net_root'] = str(cfd.parent.absolute()) + f'/Data/Network/'
@@ -54,8 +54,9 @@ if __name__ == '__main__':
     # Set up models args.
     ntype = args.network
     config['root'] = config['root'] + f"{ntype}/"
+    config['arch'] = ''
     architecture = ViTLSTM.ViT_LSTM
-    conv_params = get_params_from_best_model(config, 'spatiotemporal')
+    conv_params = get_params_from_best_model(config, 'ViT-LSTM')
 
     var_comb = config['var_comb']
 
@@ -93,7 +94,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    log_dir = config['net_root'] + 'Statistics/ViT/' 
+    log_dir = config['net_root'] + 'Statistics/ViT-LSTM/' 
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
@@ -107,8 +108,9 @@ if __name__ == '__main__':
 
     early_stop_callback = EarlyStopping(monitor="val_acc", 
                                         min_delta=0.00, patience=3, verbose=False, mode="max")
-
-    device = torch.device("cuda")
+    
+    if config['devices']:
+        device = torch.device("cuda")
 
     if 'calibrated'in norm_opt:
         criterion = FocalLossAdaptive(gamma = conv_params['gamma'].get('val',3), 

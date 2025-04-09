@@ -35,10 +35,7 @@ def build_architecture(name,
 
     # create folder for experiment
     if 'baseline' in name:
-        if not target_dir: 
-            target_dir = f'/mnt/beegfs/home/bommer1/WiOSTNN/Data/Network/baseline/exp_results/{name}/{name}_{datetime.now().strftime("%Y-%m-%dT%H-%M")}'
-        else:
-            target_dir = f'{target_dir}{name}_{datetime.now().strftime("%Y-%m-%dT%H-%M")}'
+        target_dir = f'{target_dir}{name}_{datetime.now().strftime("%Y-%m-%dT%H-%M")}'
         mp = model_params
         model_params['optimizer'] = [] 
         mp = copy.deepcopy(model_params)
@@ -46,10 +43,7 @@ def build_architecture(name,
         model_params['cls_wgt'] = class_weight
         model_params['criterion'] = criterion
     else:
-        if not target_dir:
-            target_dir = f'/mnt/beegfs/home/bommer1/WiOSTNN/Data/Network/exp_results/{name}/{name}_{datetime.now().strftime("%Y-%m-%dT%H-%M")}'
-        else:
-            target_dir = f'{target_dir}{name}_{datetime.now().strftime("%Y-%m-%dT%H-%M")}'
+        target_dir = f'{target_dir}{name}_{datetime.now().strftime("%Y-%m-%dT%H-%M")}'
 
         mp = model_params
         if args:
@@ -103,12 +97,6 @@ def build_architecture(name,
         experiment_info['learning_rate'] = str(args.learning_rate)
         experiment_info['weight_decay'] = str(args.weight_decay)
         experiment_info['dropout'] = str(args.dropout)
-    try:
-        with open(os.path.join(target_dir, 'model_architecure.json'), 'w+') as f:
-            json.dump(experiment_info, f, indent=4)
-        shutil.copyfile('models.py', os.path.join(target_dir, 'models.py'))
-    except Exception as e:
-            print(f" Error saving file due to: {e}")
 
     if encoder_D or encoder:
         model_params['encoder_u'] = encoder

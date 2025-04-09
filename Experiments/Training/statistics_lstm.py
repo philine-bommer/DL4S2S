@@ -32,7 +32,7 @@ if __name__ == '__main__':
     parser.add_argument("--notification_email", type=str, default="pbommer@atb-potsdam.de")
     parser.add_argument("--accelerator", default="gpu")
     parser.add_argument("--devices", default=1)
-    parser.add_argument("--network", type=str, default='ViT')
+    parser.add_argument("--network", type=str, default='ViT-LSTM')
     parser.add_argument("--config", type=str, default='')
     parser.add_argument("--ntrials", default=100)
     args = parser.parse_args()
@@ -61,9 +61,9 @@ if __name__ == '__main__':
 
 
     config['root'] = config['root'] + f"{ntype}/"
-    config['arch'] = 'ViT-LSTM'
+    config['arch'] = ''
     architecture = ViTLSTM.ViT_LSTM
-    conv_params = get_params_from_best_model(config, 'spatiotemporal')
+    conv_params = get_params_from_best_model(config, 'ViT')
 
     config['arch'] = ''
     var_comb = config['var_comb']
@@ -109,7 +109,7 @@ if __name__ == '__main__':
     early_stop_callback = EarlyStopping(monitor="train_acc", 
                                         min_delta=0.00, patience=3, verbose=True, mode="max")
 
-    if config['devices'] >=1:
+    if config['devices']:
         device = torch.device("cuda")
 
     if 'calibrated'in norm_opt:
@@ -175,7 +175,7 @@ if __name__ == '__main__':
             # Run Training.
         trainer_fine = pl.Trainer(accelerator=args.accelerator,
                                         gradient_clip_val = conv_params['gc_fine'],
-                                        devices = [2,3], 
+                                        devices = config['devices'], 
                                         log_every_n_steps = 10,
                                         max_epochs=config['epochs'], 
                                         check_val_every_n_epoch=5,
@@ -211,5 +211,5 @@ if __name__ == '__main__':
     accuracy_ts = np.concatenate(acc_ts).reshape(num_mods,config['data']['n_steps_out'])
 
     print(f'Accuracy mean: {accuracy_ts.mean(axis=0)}, var: {accuracy_ts.std(axis=0)}')
-    np.savez(f"{config['net_root']}Statistics/ViT/{vit_dir}/lstm_accuracy_{num_mods}model.npz", 
+    np.savez(f"{log_dirs}/lstm_accuracy_{num_mods}model.npz", 
              mean_acc = accuracy_ts.mean(axis=0), std_acc = accuracy_ts.std(axis=0), var_acc = accuracy_ts.var(axis=0), acc = accuracy_ts)

@@ -18,7 +18,7 @@ from lightning.pytorch.callbacks import StochasticWeightAveraging, EarlyStopping
 
 from deepS2S.model import IndexLSTM
 from deepS2S.model.loss import FocalLossAdaptive
-from deepS2S.dataset.datasets_wrapped import TransferData
+from deepS2S.dataset.datasets_regimes import TransferData
 from deepS2S.utils.utils_build import build_architecture, build_encoder
 from deepS2S.utils.utils_data import cls_weights
 from deepS2S.utils.utils_evaluation import evaluate_accuracy, numpy_predict
@@ -43,7 +43,7 @@ if __name__ == '__main__':
     # Load config and settings.
     exd = os.path.dirname(os.path.abspath(__file__))
     cfd = Path(exd).parent.absolute()
-    config = yaml.load(open(f'{cfd}/config/config_1980_index.yaml'), Loader=yaml.FullLoader)
+    config = yaml.load(open(f'{cfd}/config/config_index_lstm.yaml'), Loader=yaml.FullLoader)
 
     config['net_root'] = str(cfd.parent.absolute()) + f'/Data/Network/'
     config['root'] = str(cfd.parent.absolute()) + f'/Data/Network/Sweeps/'
@@ -56,14 +56,14 @@ if __name__ == '__main__':
     # Set up models args.
     ntype = args.network
     # Set up models args
-    net = 'STNN'
+    net = 'ViT-LSTM'
     setting_training = "fine"
 
-    config['root'] = config['root'] + f"{ntype}/"
-    architecture = IndexLSTM.Index_STM
+    config['root'] = config['root'] + f"{net}/"
+    architecture = IndexLSTM.Index_LSTM
     config['tropics'] = '_olr'
     config['arch'] = ''
-    conv_params = get_params_from_best_model(config, 'spatiotemporal')
+    conv_params = get_params_from_best_model(config, 'ViT')
     config['tropics'] = ''
 
 
@@ -113,7 +113,7 @@ if __name__ == '__main__':
     early_stop_callback = EarlyStopping(monitor="train_acc", 
                                         min_delta=0.00, patience=3, verbose=True, mode="max")
 
-    if config['devices'] >=1:
+    if config['devices']:
         device = torch.device("cuda")
 
     if 'calibrated'in norm_opt:
@@ -174,7 +174,7 @@ if __name__ == '__main__':
             # Run Training.
         trainer_fine = pl.Trainer(accelerator=args.accelerator,
                                         gradient_clip_val = conv_params['gc_fine'],
-                                        devices = [2,3], 
+                                        devices = config['devices'], 
                                         log_every_n_steps = 10,
                                         max_epochs=config['epochs'], 
                                         check_val_every_n_epoch=5,
@@ -210,5 +210,5 @@ if __name__ == '__main__':
     accuracy_ts = np.concatenate(acc_ts).reshape(num_mods,config['data']['n_steps_out'])
 
     print(f'Accuracy mean: {accuracy_ts.mean(axis=0)}, var: {accuracy_ts.std(axis=0)}')
-    np.savez(f"{config['net_root']}Statistics/ViT/{vit_dir}/index-lstm_accuracy_{num_mods}model.npz", 
+    np.savez(f"{log_dirs}/index-lstm_accuracy_{num_mods}model.npz", 
              mean_acc = accuracy_ts.mean(axis=0), std_acc = accuracy_ts.std(axis=0), var_acc = accuracy_ts.var(axis=0), acc = accuracy_ts)
