@@ -25,13 +25,16 @@ from climatology import *
 parser = ArgumentParser()
 
 parser.add_argument("--vrbl", type=str, default='pressure')
-parser.add_argument("--clima", type=str, default='month')
+parser.add_argument("--clima", type=str, default='dai')
 args = parser.parse_args()
 
 vrbl = args.vrbl
 clima = args.clima
-config = yaml.load(open(f"/mnt/beegfs/home/bommer1/WiOSTNN/Experiments/preprocessing/config/{vrbl}_data.yml"), Loader=yaml.FullLoader)
+exd = os.path.dirname(os.path.abspath(__file__))
+cfd = Path(exd).parent.absolute()
+config = yaml.load(open(f"{cdf}/config/{vrbl}_data.yml"), Loader=yaml.FullLoader)
 
+root = Path(cdf).parent.absolute()
 
 # User Configuration : Change these values to generate different datasets
 var_name = config.get('var_name','z') # available: 't2m', 'tp', 'z'
@@ -54,22 +57,22 @@ aggregate_func = config.get('aggregate_func', 'mean') # available: 'mean', 'sum'
 var_name_map = config.get('var_map','geopotential')#{'sst': 'air', 'z': 'geopotential', 'u': 'uwnd','olr':'ulwrf'}
 var_full = config.get('var_full','z')#{'sst': 't2m', 'z': 'z', 'u': 'u','olr':'ulwrf'}
 
-full_data_path = Path(f'./raw/{var_name}/{var_name}_{pressure_level}_full.nc')
-full_data_p = f'./raw/{var_name}/{var_name}_{pressure_level}_full.nc'
+full_data_path = Path(f'{root}/Data/ERA5/raw/{var_name}/{var_name}_{pressure_level}_full.nc')
+full_data_p = f'{root}/Data/ERA5/raw/{var_name}/{var_name}_{pressure_level}_full.nc'
 
-if not os.path.exists(Path(f'./raw/{var_name}/')):
-        os.makedirs(Path(f'./raw/{var_name}/'))
+if not os.path.exists(Path(f'{root}/Data/ERA5/raw/{var_name}/')):
+        os.makedirs(Path(f'{root}/Data/ERA5/raw/{var_name}/'))
 if not full_data_path.exists(): 
     if var_name == 'z':
-        in_file = f'./raw/{var_name_map}_{var_name}{pressure_level}.nc'
+        in_file = f'{root}/Data/ERA5/raw/{var_name_map}_{var_name}{pressure_level}.nc'
         ds = xr.open_dataset(in_file)
         # change units to watts
         ds = ds/9.81
     elif var_name == 'u':
-        in_file = f'./raw/{var_name_map}_{pressure_level}.nc'
+        in_file = f'{root}/Data/ERA5/raw/{var_name_map}_{pressure_level}.nc'
         ds = xr.open_dataset(in_file)
     elif var_name == 'olr':
-        ds = xr.open_mfdataset(f'./raw/{var_name}/{var_name}_{pressure_level}*.nc', combine='by_coords', engine ="netcdf4")
+        ds = xr.open_mfdataset(f'{root}/Data/ERA5/raw/{var_name}/{var_name}_{pressure_level}*.nc', combine='by_coords', engine ="netcdf4")
 
         # change units to watts
         ds = - ds/3600
@@ -102,7 +105,7 @@ if not full_data_path.exists():
 ds = xr.open_dataarray(full_data_p)    
     # ds = ds.resample(time='1D').mean('time')
 
-grid_path = Path(f'../WeatherBench/{resolution}deg_grid.nc')
+grid_path = Path(f'.{root}/Data_S2S/WeatherBench_grid.nc')
 
 if grid_path.exists():
     grids = xr.open_dataset(grid_path)
@@ -112,7 +115,7 @@ if grid_path.exists():
 days = config.get('days', 7)
 
 try: 
-    ds = xr.open_mfdataset(f'./raw/{var_name}/{var_name}_{pressure_level}_grid_r-mean{days}_*.nc', combine='by_coords', engine ="netcdf4").__xarray_dataarray_variable__
+    ds = xr.open_mfdataset(f'{root}/Data/ERA5/raw/{var_name}/{var_name}_{pressure_level}_grid_r-mean{days}_*.nc', combine='by_coords', engine ="netcdf4").__xarray_dataarray_variable__
 except:
     yrs = np.arange(start_year, end_year+1)
 
@@ -145,21 +148,21 @@ except:
         #     dst = ds_sel
         # else:
         #     dst = xr.concat((dst,ds_sel), dim ='time')
-        sel_name = f'./raw/{var_name}/{var_name}_{pressure_level}_grid_r-mean{days}_{year}-{year+1}.nc'
+        sel_name = f'{root}/Data/ERA5/raw/{var_name}/{var_name}_{pressure_level}_grid_r-mean{days}_{year}-{year+1}.nc'
         ds_sel.to_netcdf(sel_name, engine ="netcdf4")
 
-    ds = xr.open_mfdataset(f'./raw/{var_name}/{var_name}_{pressure_level}_grid_r-mean{days}_*.nc', combine='by_coords', engine ="netcdf4")
+    ds = xr.open_mfdataset(f'{root}/Data/ERA5/raw/{var_name}/{var_name}_{pressure_level}_grid_r-mean{days}_*.nc', combine='by_coords', engine ="netcdf4")
 
 # calculate climatology and anomalies
-climatology_folder = Path('./climatology/monthly')
+climatology_folder = Path('{root}/Data/ERA5/climatology')
 climatology_folder.mkdir(exist_ok=True)
 
 climatology_path = climatology_folder / Path(f'{var_name}_{resolution}deg_{pressure_level}_climatology.nc') 
-climatology_p = f'./climatology/{var_name}_{resolution}deg_{pressure_level}_{clima}ly_climatology_' 
+climatology_p = f'{root}/Data/ERA5/climatology/{var_name}_{resolution}deg_{pressure_level}_{clima}ly_climatology_' 
 
-anom_path = Path(f'./raw/{var_name}/{clima}')
+anom_path = Path(f'{root}/Data/ERA5/raw/{var_name}/{clima}')
 anom_path.mkdir(exist_ok=True)
-anomalies = f'./raw/{var_name}/{clima}/{var_name}_{pressure_level}_anom.nc'
+anomalies = f'{root}/Data/ERA5/raw/{var_name}/{clima}/{var_name}_{pressure_level}_anom.nc'
 if not Path(anomalies).exists():
 # if 'uwnd' in var_name_map:
     anom = climatology_and_anomalies_perLat(ds, config.get('years',30), climatology_p, clima)
@@ -194,9 +197,9 @@ del ds_sel, dst
 
 
 if clima == 'dai':
-    dataset_dir = Path(f'./datasets/{clima}')
+    dataset_dir = Path(f'{root}/Data/ERA5/datasets/{clima}')
 else:
-    dataset_dir = Path(f'./datasets')
+    dataset_dir = Path(f'{root}/Data/ERA5/datasets')
 dataset_dir.mkdir(exist_ok=True)
 
 file_name = dataset_dir / Path(f'{var_name}_{pressure_level}_{resolution}deg_{start_year}-{end_year}_{region}_{"1d" if reduce_to_single_dim else "2d"}.nc')

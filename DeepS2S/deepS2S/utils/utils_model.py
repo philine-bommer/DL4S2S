@@ -32,13 +32,19 @@ def load_single_model(config, hp_dir, cf_dir, architecture):
         with open(Path(hp_dir) / 'hparams.yaml', 'r') as f:
             result_collection = yaml.load(f, Loader=yaml.UnsafeLoader)
     except FileNotFoundError:
+        print("File not found.")
         result_collection = None
 
-    mae_olr, mae_u = build_encoder(config)
+    if architecture.__name__ == 'Index_LSTM':
+        model = architecture.load_from_checkpoint(f"{hp_dir}/best_model.ckpt", 
+                                                        encoder_u = None,
+                                                        encoder_sst = None)
+    else:   
+        mae_olr, mae_u = build_encoder(config)
 
-    model = architecture.load_from_checkpoint(f"{hp_dir}/best_model.ckpt", 
-                                                        encoder_u = mae_u.encoder,
-                                                        encoder_olr = mae_olr.encoder, )                                           
+        model = architecture.load_from_checkpoint(f"{hp_dir}/best_model.ckpt", 
+                                                            encoder_u = mae_u.encoder,
+                                                            encoder_sst = mae_olr.encoder, )                                           
                 
 
 
@@ -144,7 +150,7 @@ def test_model_and_data(config, pat, dpat, architecture, dev):
 def best_model_folder(config, exp_dir, architecture, **params):
 
     name = architecture.__name__
-
+    
     if params.get("sweep",0):
         name_var = config.get('tropics','')   
 
@@ -164,7 +170,9 @@ def best_model_folder(config, exp_dir, architecture, **params):
         strt_yr = config.get('strt','')
         trial_num = config.get('version', '')
         norm_opt = config.get('norm_opt','')
-        log_dir = exp_dir + f'version_{strt_yr}{trial_num}_{norm_opt}/'
+        name_var = config.get('tropics','')
+        log_dir = exp_dir + f'version_{strt_yr}{trial_num}_{norm_opt}{name_var}/'
+        
         if not os.path.exists(log_dir):
             log_dir = exp_dir + 'lightning_logs/'
 
@@ -182,11 +190,11 @@ def best_model_folder(config, exp_dir, architecture, **params):
         else:
             cfg_dir = log_dir
             dr = Path(cfg_dir)
-            pths = [xs for xs in dr.iterdir() if name in xs.stem]
+            pths = [xs for xs in dr.iterdir() if xs.is_dir()]
             cf_dir = pths[0]
             del dr, pths
-            log_dir = log_dir + 'lightning_logs/'
-            hp_dir = Path(log_dir + 'version_0/')
+            log_dir = str(cf_dir) + '/lightning_logs/'
+            hp_dir = Path(log_dir + 'version_1/')
     
     print(f'Analyzing model in {hp_dir}')
 

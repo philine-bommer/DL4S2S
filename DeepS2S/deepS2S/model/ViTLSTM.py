@@ -68,11 +68,11 @@ class TimeDistributed(pl.LightningModule):
 ##### MULTIMODAL ViT-LSTM #####
 #############################
 class Encoder_ViT(nn.Module):
-    def __init__(self, encoder_olr, encoder_u, **params):
+    def __init__(self, encoder_sst, encoder_u, **params):
         """
         Initializes the Encoder_ViT class.
         Args:
-            encoder_olr: The encoder for olr.
+            encoder_sst: The encoder for olr.
             encoder_u: The encoder for u.
             **params: Additional parameters.
         Returns:
@@ -81,7 +81,7 @@ class Encoder_ViT(nn.Module):
         
         super(Encoder_ViT, self).__init__()
 
-        self.encoder_olr = encoder_olr
+        self.encoder_sst = encoder_sst
         self.encoder_u = encoder_u
         self.params = params
 
@@ -108,13 +108,13 @@ class Encoder_ViT(nn.Module):
         
         for t in range(x_2d.shape[1]):
             if t == 0:
-                x_enc_s = self.encoder_olr.encode(x_olr[:,None,t,...])
+                x_enc_s = self.encoder_sst.encode(x_olr[:,None,t,...])
                 x_enc_s = x_enc_s.reshape(x_enc_s.shape[0], -1)[:,None,...]
 
                 x_enc_u = self.encoder_u.encode(x_u[:,None,t,...])
                 x_enc_u = x_enc_u.reshape(x_enc_u.shape[0], -1)[:,None,...]
             else:
-                enc_s = self.encoder_olr.encode(x_olr[:,None,t,...]).reshape(x_enc_s.shape[0], -1)[:,None,...]
+                enc_s = self.encoder_sst.encode(x_olr[:,None,t,...]).reshape(x_enc_s.shape[0], -1)[:,None,...]
                 x_enc_s = torch.cat((x_enc_s, enc_s), dim=1)
 
                 enc_u = self.encoder_u.encode(x_u[:,None,t,...]).reshape(x_enc_u.shape[0], -1)[:,None,...]
@@ -152,7 +152,7 @@ class ViT_LSTM(pl.LightningModule):
 
     def __init__(self,
                  encoder_u,
-                 encoder_olr,
+                 encoder_sst,
                  enc_out_shape,
                  in_time_lag,
                  out_time_lag,
@@ -201,7 +201,7 @@ class ViT_LSTM(pl.LightningModule):
         """
         super(ViT_LSTM, self).__init__()
 
-        self.save_hyperparameters(ignore=['encoder_u','encoder_olr'])
+        self.save_hyperparameters(ignore=['encoder_u','encoder_sst'])
 
         self.norm_both = norm_both
         self.norm_bch = norm_bch
@@ -226,7 +226,7 @@ class ViT_LSTM(pl.LightningModule):
             self.output_activation = None
 
         self.encoder_u = encoder_u
-        self.encoder_olr = encoder_olr
+        self.encoder_sst = encoder_sst
         encoder_out_dim = enc_out_shape
 
         self.flatten = nn.Flatten()
@@ -440,14 +440,14 @@ class ViT_LSTM(pl.LightningModule):
     
     def freeze_encoder(self):
         """
-        Freezes the encoder by freezing the encoder_u and encoder_olr.
+        Freezes the encoder by freezing the encoder_u and encoder_sst.
 
         Returns:
             str: A message indicating that the encoder has been frozen.
         """
 
         self.encoder_u.freeze()
-        self.encoder_olr.freeze()
+        self.encoder_sst.freeze()
 
         return "Encoder frozen"
     
@@ -467,13 +467,13 @@ class ViT_LSTM(pl.LightningModule):
         
         for t in range(x_2d.shape[1]):
             if t == 0:
-                x_enc_s = self.encoder_olr.encode(x_olr[:,None,t,...])
+                x_enc_s = self.encoder_sst.encode(x_olr[:,None,t,...])
                 x_enc_s = x_enc_s.reshape(x_enc_s.shape[0], -1)[:,None,...]
 
                 x_enc_u = self.encoder_u.encode(x_u[:,None,t,...])
                 x_enc_u = x_enc_u.reshape(x_enc_u.shape[0], -1)[:,None,...]
             else:
-                enc_s = self.encoder_olr.encode(x_olr[:,None,t,...]).reshape(x_enc_s.shape[0], -1)[:,None,...]
+                enc_s = self.encoder_sst.encode(x_olr[:,None,t,...]).reshape(x_enc_s.shape[0], -1)[:,None,...]
                 x_enc_s = torch.cat((x_enc_s, enc_s), dim=1)
 
                 enc_u = self.encoder_u.encode(x_u[:,None,t,...]).reshape(x_enc_u.shape[0], -1)[:,None,...]

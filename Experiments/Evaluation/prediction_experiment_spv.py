@@ -16,25 +16,24 @@ import deepS2S.model.ViTLSTM as vit_net
 
 from deepS2S.utils.utils import statics_from_config
 from deepS2S.utils.utils_data import generate_clim_pred, load_data
-from deepS2S.utils.plot_utils import *
-import deepS2S.utils.utils_evaluation as eval
+from deepS2S.utils.utils_plot import *
 
 # Set hyperparameters.
 
-cm_list = ['#7fbf7b','#1b7837','#762a83','#9970ab','#c2a5cf']  #762a83
-regimes = ['SB', 'NAO-', 'AR', 'NAO+']
+cm_list = ['#7fbf7b','#1b7837','#762a83','#9970ab','#c2a5cf']  
+regimes = ['SB', 'NAO-', 'AR', 'NAO+'] #adapt if new regimes have been assigned
 
 exd = os.path.dirname(os.path.abspath(__file__))
-cfd = exd.parent.absolute()
+cfd = Path(exd).parent.absolute()
 
 root_path = str(cfd.parent.absolute())+'/Data'
 data_path = f"{root_path}/"
 res_path = str(cfd.parent.absolute()) + f'/Data/Results/'
 
 
-arch_types = ['Index_LSTM', 'LSTM', 'ViT']
+arch_types = ['Index_LSTM', 'LSTM', 'ViT_LSTM']
 for arch_type in arch_types:
-    if arch_type == 'ViT':
+    if arch_type == 'ViT_LSTM':
 
             cfile = '_vit_lstm'
             config = yaml.load(open(f'{cfd}/config/config{cfile}.yaml'), Loader=yaml.FullLoader)
@@ -46,7 +45,7 @@ for arch_type in arch_types:
             arch = config.get('arch', 'ViT')
             tropics = config.get('tropics', '')
 
-            stat_dir =  config['net_root'] + f'Statistics/{arch}'
+            stat_dir =  str(cfd.parent.absolute()) + f'/Data/Network/' + f'Statistics/{arch}'
             result_path = f'{res_path}/Statistics/{arch}/'
             results_directory = Path(f'{result_path}version_{strt_yr}{trial_num}_{norm_opt}{tropics}/')
             os.makedirs(results_directory, exist_ok=True)
@@ -66,7 +65,7 @@ for arch_type in arch_types:
             arch = config.get('arch', 'ViT')
             tropics = config.get('tropics', '')
 
-            stat_dir =  config['net_root'] + f'Statistics/{arch_type}/'
+            stat_dir =  str(cfd.parent.absolute()) + f'/Data/Network/' + f'Statistics/{arch_type}/'
             result_path = f'{res_path}Statistics/{arch_type}/'
             results_directory = Path(f'{result_path}version_{strt_yr}{trial_num}_{norm_opt}{tropics}/')
             os.makedirs(results_directory, exist_ok=True)
@@ -86,14 +85,16 @@ for arch_type in arch_types:
             tropics = config.get('tropics', '')
 
 
-            stat_dir =  config['net_root'] + f'Statistics/{arch_type}/'
+            stat_dir =  str(cfd.parent.absolute()) + f'/Data/Network/' + f'Statistics/{arch_type}/'
             result_path = f'{res_path}Statistics/{arch_type}/'
             results_directory = Path(f'{result_path}version_{strt_yr}{trial_num}_{norm_opt}{tropics}/')
             os.makedirs(results_directory, exist_ok=True)
             mod_name = 'Index_LSTM'
-            architecture = index_net.IndexLSTM
+            architecture = index_net.Index_LSTM
 
-
+    config['net_root'] = str(cfd.parent.absolute()) + f'/Data/Network/'
+    config['root'] = str(cfd.parent.absolute()) + f'/Data/Network/Sweeps/'
+    config['data_root'] = root_path
     test_loader, data_set, cls_wt, test_set, infos = load_data(config)
 
     var_comb = config['var_comb']
@@ -104,11 +105,11 @@ for arch_type in arch_types:
     exp_dir =  f"{stat_dir}version_{strt_yr}{trial_num}_{norm_opt}{tropics}/"
     pths = [xs for xs in Path(exp_dir).iterdir() if xs.is_dir()]
 
-    data_collect = np.load(f'{results_directory}/collected_loop_data_{len(pths)-1}.npz')
-    data_result = np.load(f'{results_directory}/accuracy_{len(pths)-1}model.npz')
+    data_collect = np.load(f'{results_directory}/collected_loop_data_{len(pths)}.npz')
+    data_result = np.load(f'{results_directory}/accuracy_{len(pths)}model.npz')
         
     persistance = data_collect['persistance'] 
-    olr = data_collect['olr'] 
+    olr = data_collect['sst'] 
     u10 = data_collect['u10'] 
     dates = data_collect['dates'] 
     daytimes = data_collect['daytimes']
@@ -176,7 +177,7 @@ for arch_type in arch_types:
     sum_spv_reg = np.zeros((4,1))
     cnts_reg_in  = np.zeros((4,1))
 
-
+    input_reg = np.argmax(input_reg, axis = 2)
     for i in range(loop_probabilities.shape[0]):
         for j in range(loop_probabilities.shape[1]):
             for k in range(loop_probabilities.shape[2]):
@@ -335,5 +336,5 @@ for arch_type in arch_types:
     alphas = np.linspace(0.5,1, 6)
     marker_list = ['o','s','^','v','D','*']
 
-    np.savez(f'{results_directory}{arch_type}spv_teleconnections.npz', pv_anom_reg_mean = pv_anom_reg_mean, vmax = vmax, strong_perc = strong_perc, med_perc = med_perc, marker_list = marker_list, alphas = alphas,
+    np.savez(f'{results_directory}/{arch_type}spv_teleconnections.npz', pv_anom_reg_mean = pv_anom_reg_mean, vmax = vmax, strong_perc = strong_perc, med_perc = med_perc, marker_list = marker_list, alphas = alphas,
          delta_t = delta_t, regimes = regimes, pv_anom_tar_dt = pv_anom_tar_dt, pv_anom_tar_dt_mean = pv_anom_tar_dt_mean, pv_anom_all_dt_mean = pv_anom_all_dt_mean, pv_anom_reg_std = pv_anom_reg_std, pv_all_dt_anom_stds = pv_all_dt_anom_stds)

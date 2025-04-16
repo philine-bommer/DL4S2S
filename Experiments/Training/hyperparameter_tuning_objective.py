@@ -121,7 +121,7 @@ def objective_vit(trial: optuna.trial.Trial,
      
     model_params = dict(
         encoder_u = Mae_u,
-        encoder_olr = Mae_olr,
+        encoder_sst = Mae_olr,
         enc_out_shape = [1,config_enc['vit']['dim']],
         in_time_lag=config['data']['n_steps_in'],
         out_time_lag=config['data']['n_steps_out'],
@@ -178,7 +178,7 @@ def objective_vit(trial: optuna.trial.Trial,
     model_params['bs'] = batch_size
     model_params['grad_clip_fine'] = gc_fine
     model_params['encoder_u'] = []
-    model_params['encoder_olr'] = []
+    model_params['encoder_sst'] = []
 
     trainer_fine.logger.log_hyperparams(model_params) #only if trainer logger = False
 

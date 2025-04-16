@@ -153,9 +153,9 @@ def nae_regimes_analysis(nae_inputs,
 def nae_regimes_analysis_timesteps(nae_inputs, 
                          regimes, 
                          loop_probabilities, 
-                         loop_targets, 
-                         frac = 0.8, 
-                         qall_90 = False):
+                         loop_targets,
+                         qall_90 = False, 
+                         frac = 0.8):
 
 
     # conditional probabilities.
@@ -190,6 +190,7 @@ def nae_regimes_analysis_timesteps(nae_inputs,
                             else:
                                 nae_unconditional_count[sub_targets[i,j,k],k, d_t-1] += 1
                                 if sub_lp[i,j,k,sub_targets[i,j,k]] > qall_90:
+                                    # nae_unconditional_count[sub_targets[i,j,k],k, d_t-1] += 1
                                     nae_conditional_count[sub_targets[i,j,k], int(sub_nae[i,j,t]),k, d_t-1] += 1
                                     
         for k in range(sub_lp.shape[2]):
@@ -242,12 +243,12 @@ def nae_regimes_analysis_timesteps(nae_inputs,
 
     for k in range(sub_lp.shape[2]):
         for t in range(nae_inputs.shape[2]):
-            for l in range(len(regimes)):
-                for m in range(len(regimes)):
-                    dt = np.abs((t-5)) + (k+1)
+                for l in range(len(regimes)):
+                    for m in range(len(regimes)):
+                        dt = np.abs((t-5)) + (k+1)
 
-                    if np.isnan(probability_nae_array[l,m,k,dt-1]):
-                        probability_nae_array[l,m,k,dt-1] = 0
+                        if np.isnan(probability_nae_array[l,m,k,dt-1]):
+                            probability_nae_array[l,m,k,dt-1] = 0
 
     probability_nae = pd.concat(probability_nae_ls) 
 

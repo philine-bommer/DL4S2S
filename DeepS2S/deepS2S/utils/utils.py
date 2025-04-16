@@ -170,15 +170,16 @@ def get_params_from_best_model(config:  dict,
     strt_yr = config.get('strt','')
     trial_num = config.get('version', '')
     norm_opt = config.get('norm_opt','')
-    arch = config.get('arch','ViT-LSTM/')
+    arch = config.get('arch','ViT_LSTM/')
     name_var = config.get('tropics','')   
     exp_dir =  config['root'] + f'{arch}Sweep_{strt_yr}{trial_num}_{norm_opt}{name_var}/'
     
     try : 
         con_res = yaml.load(open(exp_dir + '/result.yml'), Loader=yaml.UnsafeLoader)
     except: 
-        exp_dir = config['root']
+        exp_dir = config['S2S_root'] ## external dataset downloaded
         con_res = yaml.load(open(exp_dir + 'result.yml'), Loader=yaml.UnsafeLoader)
+        con_res["test_dir"] = exp_dir
 
     hp_dir = con_res.get("test_dir",0)
     hps = yaml.load(open(hp_dir / 'hparams.yaml'), Loader=yaml.UnsafeLoader)

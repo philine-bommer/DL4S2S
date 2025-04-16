@@ -63,7 +63,9 @@ if __name__ == '__main__':
     architecture = IndexLSTM.Index_LSTM
     config['tropics'] = '_olr'
     config['arch'] = ''
-    conv_params = get_params_from_best_model(config, 'ViT')
+    if config.get('download_path',''):
+        config['S2S_root'] = str(cfd.parent.absolute()) + config.get('download_path','') + f'/Network/Sweeps/ViT-LSTM/'
+    conv_params = get_params_from_best_model(config, 'ViT_LSTM')
     config['tropics'] = ''
 
 
@@ -134,7 +136,7 @@ if __name__ == '__main__':
 
     model_params = dict(
         encoder_u = Mae_u,
-        encoder_olr = Mae_olr,
+        encoder_sst = Mae_olr,
         in_time_lag=config['data']['n_steps_in'],
         out_time_lag=config['data']['n_steps_out'],
         out_dim=data['val'][0][0][1].shape[-1],

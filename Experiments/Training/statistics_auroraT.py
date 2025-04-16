@@ -17,8 +17,10 @@ from deepS2S.model.temporalViT import TemporalTransformerModel
 from deepS2S.dataset.dataset_embeddings import EmbeddingDataset
 from deepS2S.utils.utils_train import compute_class_weights, training, accuracy_per_timestep
 
+os.environ["CUDA_VISIBLE_DEVICES"]='2,3'
 if __name__ == '__main__':
 
+    
     parser = ArgumentParser()
 
     parser.add_argument("--ntrials", default=100)
@@ -39,18 +41,18 @@ if __name__ == '__main__':
     config = yaml.unsafe_load(open(f'{cfd}/config/config_aurora_T.yaml'))
 
     root_path = str(cfd.parent.absolute())+'/Data/Embeddings/Aurora'
-    data_path = f"{root_path}/"
+    embeddings_path = f"{root_path}/"
 
     config['data_root'] = str(cfd.parent.absolute()) + f'/Data'
 
     dataset_order = ['train', 'val', 'test']
     seasons = config['seasons']
     dataset_name = config['dataset_name']
-    config['config']['nae_path'] = f"{root_path}/" #don't change this
+    config['config']['nae_path'] = config['data_root'] + '/ERA5/datasets/' #don't change this
     batch_size =  config['network']['batch_size']
 
     keys = 'train'
-    file_emb = f"{data_path}{keys}_embeddings_cleaned.npz"
+    file_emb = f"{embeddings_path}{keys}_embeddings_cleaned.npz"
     embeds = np.load(file_emb)
     train_dataset = EmbeddingDataset(data = embeds['embeddings'].astype(np.float32),
                         dataset_name=config['dataset_name'],
@@ -62,7 +64,7 @@ if __name__ == '__main__':
     train_loader = DataLoader(train_dataset, batch_size = batch_size, shuffle=True)
 
     keys = 'val'
-    file_emb = f"{data_path}{keys}_embeddings_cleaned.npz"
+    file_emb = f"{embeddings_path}{keys}_embeddings_cleaned.npz"
     embeds = np.load(file_emb)
     val_dataset = EmbeddingDataset(data = embeds['embeddings'].astype(np.float32),
                         dataset_name=config['dataset_name'],
@@ -74,7 +76,7 @@ if __name__ == '__main__':
     val_loader = DataLoader(val_dataset, batch_size = batch_size, shuffle=True)
 
     keys = 'test'
-    file_emb = f"{data_path}{keys}_embeddings_cleaned.npz"
+    file_emb = f"{embeddings_path}{keys}_embeddings_cleaned.npz"
     embeds = np.load(file_emb)
     test_dataset = EmbeddingDataset(data = embeds['embeddings'].astype(np.float32),
                         dataset_name=config['dataset_name'],
@@ -87,7 +89,7 @@ if __name__ == '__main__':
     test_loader = DataLoader(test_dataset, batch_size = batch_size, shuffle=True)
 
     keys = 'test'
-    file_emb = f"{data_path}{keys}_embeddings_cleaned.npz"
+    file_emb = f"{embeddings_path}{keys}_embeddings_cleaned.npz"
     embeds = np.load(file_emb)
     test_dataset = EmbeddingDataset(data = embeds['embeddings'].astype(np.float32),
                         dataset_name=config['dataset_name'],
@@ -97,7 +99,7 @@ if __name__ == '__main__':
                         return_dates=False
                     )
     
-    log_dirs = '/mnt/beegfs/home/bommer1/WiOSTNN/Data/Network/Statistics/Aurora/' 
+    log_dirs = str(cfd.parent.absolute()) + '/Data/Network/Statistics/Aurora/' 
     if not os.path.exists(log_dirs):
         os.makedirs(log_dirs)
 
@@ -136,5 +138,5 @@ if __name__ == '__main__':
     accuracy_ts = np.concatenate(acc_ts).reshape(num_mods,6)
 
     print(f'Accuracy mean: {accuracy_ts.mean(axis=0)}, std: {accuracy_ts.std(axis=0)}')
-    np.savez(f"/mnt/beegfs/home/bommer1/WiOSTNN/Data/Results/Statistics/ViT/version_1980_calibrated_olr/AURORA_accuracy_97model.npz", 
+    np.savez(f"{log_dirs}/AURORA_accuracy_97model.npz", 
              mean_acc = accuracy_ts.mean(axis=0), std_acc = accuracy_ts.std(axis=0), var_acc = accuracy_ts.var(axis=0), acc = accuracy_ts)

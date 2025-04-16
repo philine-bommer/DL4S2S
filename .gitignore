@@ -18,7 +18,7 @@
 *.jar
 *.rar
 *.tar
-*.zip
+# *.zip
 
 # Logs and databases #
 ######################
@@ -39,18 +39,19 @@ Thumbs.db
 # Data files #
 ######################
 *.nc
-*.ckpt
+# *.ckpt
 *.pt
 *.grib
 *.pdf
 *.png
 *.npz
 *.json
-*.csv
+
 
 # Folders #
 ######################
 **/Data
+**/Network
 **/lightning_logs
 **/__pycache__
 **/.ipynb_checkpoints

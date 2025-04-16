@@ -32,7 +32,7 @@ if __name__ == '__main__':
     parser.add_argument("--notification_email", type=str, default="pbommer@atb-potsdam.de")
     parser.add_argument("--accelerator", default="gpu")
     parser.add_argument("--devices", default=1)
-    parser.add_argument("--network", type=str, default='ViT-LSTM')
+    parser.add_argument("--network", type=str, default='ViT_LSTM')
     parser.add_argument("--config", type=str, default='')
     parser.add_argument("--ntrials", default=100)
     args = parser.parse_args()
@@ -55,7 +55,7 @@ if __name__ == '__main__':
     # Set up models args.
     ntype = args.network
     # Set up models args
-    net = 'ViT-LSTM'
+    net = 'ViT_LSTM'
     config['network']['mode'] = 'base'
     setting_training = "fine"
 
@@ -63,7 +63,7 @@ if __name__ == '__main__':
     config['root'] = config['root'] + f"{ntype}/"
     config['arch'] = ''
     architecture = ViTLSTM.ViT_LSTM
-    conv_params = get_params_from_best_model(config, 'ViT')
+    conv_params = get_params_from_best_model(config, 'ViT_LSTM')
 
     config['arch'] = ''
     var_comb = config['var_comb']
@@ -132,7 +132,7 @@ if __name__ == '__main__':
 
     model_params = dict(
         encoder_u = Mae_u.encoder,
-        encoder_olr = Mae_tropics.encoder,
+        encoder_sst = Mae_tropics.encoder,
         enc_out_shape =  [1,config_enc_u['vit']['dim']],
         in_time_lag=config['data']['n_steps_in'],
         out_time_lag=config['data']['n_steps_out'],

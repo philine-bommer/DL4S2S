@@ -8,7 +8,7 @@ enc: '_static'
 setting_training: "fine"
 transfer: 1
 devices: [0]
-loop_dev: [0,1,2,3]
+loop_dev: [2,3]
 norm_opt: 'calibrated'
 tropics: '_olr'
 tropic_folder: 'version_1/best_model_olr'

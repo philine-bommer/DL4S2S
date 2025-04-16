@@ -25,32 +25,32 @@ from argparse import ArgumentParser
 
 import xarray as xr
 import numpy as np
-
+import pdb
 
 import lightning.pytorch as pl
 
 
 from deepS2S.model import ViTLSTM
 from deepS2S.utils.utils_data import load_data
-import deepS2S.utils.utils_evaluation as eval
+from deepS2S.utils.utils_evaluation import *
 from deepS2S.utils.utils import statics_from_config
 from deepS2S.utils.utils_load import collect_statistics_from_file, collect_statistics_from_model
 from deepS2S.utils.utils_model import test_model_and_data, best_model_folder
-from deepS2S.utils.plot_utils import *
+from deepS2S.utils.utils_plot import *
 
 
 # Set hyperparameters.
 parser = ArgumentParser()
 
-parser.add_argument("--config", type=str, default='')
+parser.add_argument("--config", type=str, default='_lstm')
 parser.add_argument("--ntrials", default=100)
 args = parser.parse_args()
 cfile = args.config
 
 exd = os.path.dirname(os.path.abspath(__file__))
-cfd = exd.parent.absolute()
+cfd = Path(exd).parent.absolute()
 config = yaml.load(open(f'{cfd}/config/config{cfile}.yaml'), Loader=yaml.FullLoader)
-config_base = yaml.load(open(f'./config/config_1980_olr.yaml'), Loader=yaml.FullLoader)
+config_base = yaml.load(open(f'{cfd}/config/config_vit_lstm.yaml'), Loader=yaml.FullLoader)
 
 strt_yr = config.get('strt','')
 trial_num = config.get('version', '')
@@ -59,6 +59,13 @@ arch = config.get('arch', 'ViT')
 tropics = config.get('tropics', '')
 config['net_root'] = str(cfd.parent.absolute()) + f'/Data/Network/'
 config['root'] = str(cfd.parent.absolute()) + f'/Data/Network/Sweeps/'
+config['data_root'] = str(cfd.parent.absolute()) + f'/Data'
+
+config_base['net_root'] = str(cfd.parent.absolute()) + f'/Data/Network/'
+config_base['root'] = str(cfd.parent.absolute()) + f'/Data/Network/Sweeps/'
+config_base['data_root'] = str(cfd.parent.absolute()) + f'/Data'
+
+
 
 if 'index' == config.get('exp_type', ''):
     stat_dir =  config['net_root'] + f'Statistics/Index_LSTM/'
@@ -68,7 +75,7 @@ elif config['network'].get('mode', 'run') == 'base':
     stat_dir =  config['net_root'] + f'Statistics/LSTM/'
     result_path = str(cfd.parent.absolute()) + f'/Data/Results/Statistics/LSTM/'
 else:
-    stat_dir =  config['net_root'] + f'Statistics/{arch}'
+    stat_dir =  config['net_root'] + f'Statistics/ViT-LSTM/'
     result_path = str(cfd.parent.absolute()) + f'/Data/Results/Statistics/{arch}/'
 
 results_directory = Path(f'{result_path}version_{strt_yr}{trial_num}_{norm_opt}{tropics}/')
@@ -89,9 +96,10 @@ data_info, seasons = statics_from_config(config_base)
 '''Load initial model'''
 params_base = dict( iter = 0)
 exp_dir =  f"{stat_dir}version_{strt_yr}{trial_num}_{norm_opt}{tropics}/"
-bhp_dir, cf_dir, _ = best_model_folder(config_base, exp_dir, architecture, **params_base)
+# pdb.set_trace()
+bhp_dir, cf_dir, _ = best_model_folder(config, stat_dir, architecture, **params_base)
 
-acc_base, model_baseline, _, _, _, _, _, _ = test_model_and_data(config_base, bhp_dir, cf_dir, architecture, [1])
+acc_base, model_baseline, _, _, _, _, _, _ = test_model_and_data(config, bhp_dir, cf_dir, architecture, [1])
 
 trainer = pl.Trainer(accelerator="gpu",
                     devices = [3],
@@ -169,7 +177,7 @@ for var in ['olr', 'u10']:
 params = dict(cls_wgt = cls_wt, sweep =  1)
 pths = [xs for xs in Path(exp_dir).iterdir() if xs.is_dir()]
 
-result_data = Path(f'{results_directory}/full_loop_data_{len(pths)-1}.npz')
+result_data = Path(f'{results_directory}/full_loop_data_{len(pths)}.npz')
 if os.path.exists(result_data):
     res_data = np.load(result_data)
     loop_probabilities = []

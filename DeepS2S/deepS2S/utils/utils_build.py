@@ -35,7 +35,7 @@ def build_architecture(name,
 
     # create folder for experiment
     if 'baseline' in name:
-        target_dir = f'{target_dir}{name}_{datetime.now().strftime("%Y-%m-%dT%H-%M")}'
+        # target_dir = f'{target_dir}{name}_{datetime.now().strftime("%Y-%m-%dT%H-%M")}'
         mp = model_params
         model_params['optimizer'] = [] 
         mp = copy.deepcopy(model_params)
@@ -43,7 +43,7 @@ def build_architecture(name,
         model_params['cls_wgt'] = class_weight
         model_params['criterion'] = criterion
     else:
-        target_dir = f'{target_dir}{name}_{datetime.now().strftime("%Y-%m-%dT%H-%M")}'
+        # target_dir = f'{target_dir}{name}_{datetime.now().strftime("%Y-%m-%dT%H-%M")}'
 
         mp = model_params
         if args:
@@ -57,11 +57,11 @@ def build_architecture(name,
             model_params['weight_decay'] = args.weight_decay
         model_params['optim'] = [] 
   
-        if model_params.get('encoder_olr',0) or model_params.get('encoder_u',0):
+        if model_params.get('encoder_sst',0) or model_params.get('encoder_u',0):
             encoder = model_params['encoder_u']
-            encoder_D = model_params['encoder_olr']
+            encoder_D = model_params['encoder_sst']
             model_params['encoder_u'] = [] 
-            model_params['encoder_olr'] = [] 
+            model_params['encoder_sst'] = [] 
         else:
             encoder = None
             encoder_D = None
@@ -70,8 +70,8 @@ def build_architecture(name,
         model_params['cls_wgt'] = class_weight
         model_params['criterion'] = criterion
         
-    if not os.path.exists(target_dir):
-        os.makedirs(target_dir)
+    # if not os.path.exists(target_dir):
+    #     os.makedirs(target_dir)
 
 
 
@@ -100,7 +100,7 @@ def build_architecture(name,
 
     if encoder_D or encoder:
         model_params['encoder_u'] = encoder
-        model_params['encoder_olr'] = encoder_D
+        model_params['encoder_sst'] = encoder_D
     model = architecture(**model_params)
     model.configure_optimizers()
     model.configure_loss()
@@ -125,7 +125,7 @@ def build_finetune(data,
     model = architecture.load_from_checkpoint(f"{trainer.logger.log_dir}/best_pretrained_model.ckpt", **kwargs,strict=False)
     model.configure_optimizers()
     model.configure_loss()
-    if kwargs.get('encoder_olr',0) or kwargs.get('encoder_u',0):
+    if kwargs.get('encoder_sst',0) or kwargs.get('encoder_u',0):
         model.freeze_encoder()
     # model.load_from_checkpoint(f"{trainer.logger.log_dir}/best_pretrained_model.ckpt")
 
@@ -150,11 +150,11 @@ def build_architecture_sweep(name,
 
     target_dir = f'{trainer.logger.log_dir}/{name}/{name}_{datetime.now().strftime("%Y-%m-%dT%H-%M")}'
 
-    if model_params.get('encoder_olr',0) and model_params.get('encoder_u',0):
+    if model_params.get('encoder_sst',0) and model_params.get('encoder_u',0):
         encoder = model_params['encoder_u']
-        encoder_D = model_params['encoder_olr']
+        encoder_D = model_params['encoder_sst']
         model_params['encoder_u'] = [] 
-        model_params['encoder_olr'] = [] 
+        model_params['encoder_sst'] = [] 
     # else:
     # model_params['hidden_dim'] = model_params['hidden_dim']
     # model_params['encoder_num_layers'] = model_params['encoder_num_layers']
@@ -196,7 +196,7 @@ def build_architecture_sweep(name,
     
     if encoder_D or encoder:
         model_params['encoder_u'] = encoder
-        model_params['encoder_olr'] = encoder_D
+        model_params['encoder_sst'] = encoder_D
     model = architecture(**model_params)
     model.configure_optimizers()
     model.configure_loss()
@@ -215,7 +215,7 @@ def build_encoder(config):
     enc_type = config.get('enc','')
     enc_path = config['net_root'] + f'MAE/version_{strt_yr}{trial_num}_{norm_opt}/individual{enc_type}/'
 
-
+    
     config_enc = yaml.load(open(f'{enc_path}config_u.yaml'), Loader=yaml.FullLoader)
     encoder = ViT(image_size = tuple(config_enc['loaded_pars']['frame_size']),
                       patch_size = tuple(config_enc['vit']['patch_size']),
@@ -313,7 +313,7 @@ def load_model(config, exp_dir, name, **params):
     mae_sst, mae_u = build_encoder(config)
     model = architecture.load_from_checkpoint(f"{hp_dir}/best_finetuned_model.ckpt", 
                                                     encoder_u = mae_u.encoder,
-                                                        encoder_olr = mae_sst.encoder, )
+                                                        encoder_sst = mae_sst.encoder, )
                                                     
     model.configure_optimizers()
     model.configure_loss()
@@ -358,7 +358,7 @@ def load_multi_model(config, current_dir, name, **params):
 
     model = architecture.load_from_checkpoint(f"{hp_dir}/best_model.ckpt", 
                                                     encoder_u = mae_u,
-                                                    encoder_olr = mae_sst, )
+                                                    encoder_sst = mae_sst, )
                                                     
                 
     model.configure_optimizers()
@@ -405,7 +405,7 @@ def load_multi_model(config, current_dir, name, **params):
 
 #     model = architecture.load_from_checkpoint(f"{hp_dir}/best_model.ckpt", 
 #                                                     encoder_u = mae_u,
-#                                                     encoder_olr = mae_sst,)  
+#                                                     encoder_sst = mae_sst,)  
 #                                                     # cls_wgt = cls_wgt_hp,#params['cls_wgt'], 
 #                                                     # strict=False)
 #     checkpoint = torch.load(f"{hp_dir}/best_model.ckpt")

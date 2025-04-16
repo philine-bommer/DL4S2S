@@ -40,14 +40,14 @@ class ImageDataset(pl.LightningDataModule):
         self.return_dates = params.get('return_dates', False)
         self.combine_test = params.get('combine_test',False)
         self.var_comb = var_comb
-        self.data_dir = params.get('data_dir', '.../Data/')
+
+        exd = os.path.dirname(os.path.abspath(__file__))
+        cfd = Path(exd).parent.absolute()
+        datadir =  str(cfd.parent.absolute()) + f'/Data/'
+        self.data_dir = params.get('data_dir', datadir)
         self.return_dates = params.get('return_dates', False)
         self.t_len = params.get('t_len', 6)
         self.lon_360 = params.get('lon_tarfo', True)
-        # if data is None: 
-        #     raise Exception("Weather variable need to be specified")
-        # else:
-        #     self.data = data
 
         self.dataset= dataset
         self.get_images()

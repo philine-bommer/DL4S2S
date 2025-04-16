@@ -56,7 +56,7 @@ if __name__ == '__main__':
     config['root'] = config['root'] + f"{ntype}/"
     config['arch'] = ''
     architecture = ViTLSTM.ViT_LSTM
-    conv_params = get_params_from_best_model(config, 'ViT-LSTM')
+    conv_params = get_params_from_best_model(config, 'ViT_LSTM')
 
     var_comb = config['var_comb']
 
@@ -128,7 +128,7 @@ if __name__ == '__main__':
     # Build model
     model_params = dict(
         encoder_u = Mae_u,
-        encoder_olr = Mae_olr,
+        encoder_sst = Mae_olr,
         enc_out_shape = [1,config_enc['vit']['dim']],
         in_time_lag=config['data']['n_steps_in'],
         out_time_lag=config['data']['n_steps_out'],

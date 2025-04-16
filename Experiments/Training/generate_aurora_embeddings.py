@@ -30,7 +30,7 @@ from aurora import AuroraSmall, Batch, Metadata, Aurora, rollout
 from deepS2S.dataset.dataset_embeddings import ImageDataset
 from deepS2S.dataset.datasets_regimes import WeatherDataset
 from deepS2S.utils.utils import statics_from_config
-
+os.environ["CUDA_VISIBLE_DEVICES"]='2,3'
 
 activations = {}
 def _get_activation(name: str):
@@ -119,7 +119,7 @@ embeddings = {'train': None, 'val': None, 'test': None}
 for keys, images in images.items():
     file_emb = f"{data_path}{keys}_embeddings_cleaned.npz"
 
-    if os.path.exists(file_emb):
+    if not os.path.exists(file_emb):
         surf_vars = images.surf
         atmos_vars = images.atmos
         times = images.times

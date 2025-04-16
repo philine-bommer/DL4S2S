@@ -195,7 +195,7 @@ class Index_LSTM(pl.LightningModule):
                  cls_wgt,
                  criterion,
                  encoder_u = None,
-                 encoder_olr = None,
+                 encoder_sst = None,
                  out_dim=1,
                  dropout=0.0,
                  output_probabilities=False,
@@ -254,7 +254,7 @@ class Index_LSTM(pl.LightningModule):
             self.output_activation = None
 
         self.encoder_u = encoder_u
-        self.encoder_olr = encoder_olr
+        self.encoder_sst = encoder_sst
         self.ts_len = ts_len
 
         self.flatten = nn.Flatten()

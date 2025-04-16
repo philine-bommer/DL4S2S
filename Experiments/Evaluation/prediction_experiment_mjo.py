@@ -16,25 +16,24 @@ import deepS2S.model.ViTLSTM as vit_net
 
 from deepS2S.utils.utils import statics_from_config
 from deepS2S.utils.utils_data import generate_clim_pred, load_data
-from deepS2S.utils.plot_utils import *
-import deepS2S.utils.utils_evaluation as eval
+from deepS2S.utils.utils_plot import *
 
 # Set hyperparameters.
 
-cm_list = ['#7fbf7b','#1b7837','#762a83','#9970ab','#c2a5cf']  #762a83
-regimes = ['SB', 'NAO-', 'AR', 'NAO+']
+cm_list = ['#7fbf7b','#1b7837','#762a83','#9970ab','#c2a5cf']  
+regimes = ['SB', 'NAO-', 'AR', 'NAO+'] #adapt if new regimes have been assigned
 
 exd = os.path.dirname(os.path.abspath(__file__))
-cfd = exd.parent.absolute()
+cfd = Path(exd).parent.absolute()
 
 root_path = str(cfd.parent.absolute())+'/Data'
 data_path = f"{root_path}/"
 res_path = str(cfd.parent.absolute()) + f'/Data/Results/'
 
 
-arch_types = ['Index_LSTM', 'LSTM', 'ViT']
+arch_types = ['Index_LSTM', 'LSTM', 'ViT_LSTM']
 for arch_type in arch_types:
-    if arch_type == 'ViT':
+    if arch_type == 'ViT_LSTM':
 
             cfile = '_vit_lstm'
             config = yaml.load(open(f'{cfd}/config/config{cfile}.yaml'), Loader=yaml.FullLoader)
@@ -46,7 +45,7 @@ for arch_type in arch_types:
             arch = config.get('arch', 'ViT')
             tropics = config.get('tropics', '')
 
-            stat_dir =  config['net_root'] + f'Statistics/{arch}'
+            stat_dir =  str(cfd.parent.absolute()) + f'/Data/Network/' + f'Statistics/{arch}'
             result_path = f'{res_path}/Statistics/{arch}/'
             results_directory = Path(f'{result_path}version_{strt_yr}{trial_num}_{norm_opt}{tropics}/')
             os.makedirs(results_directory, exist_ok=True)
@@ -66,7 +65,7 @@ for arch_type in arch_types:
             arch = config.get('arch', 'ViT')
             tropics = config.get('tropics', '')
 
-            stat_dir =  config['net_root'] + f'Statistics/{arch_type}/'
+            stat_dir =  str(cfd.parent.absolute()) + f'/Data/Network/' + f'Statistics/{arch_type}/'
             result_path = f'{res_path}Statistics/{arch_type}/'
             results_directory = Path(f'{result_path}version_{strt_yr}{trial_num}_{norm_opt}{tropics}/')
             os.makedirs(results_directory, exist_ok=True)
@@ -86,15 +85,16 @@ for arch_type in arch_types:
             tropics = config.get('tropics', '')
 
 
-            stat_dir =  config['net_root'] + f'Statistics/{arch_type}/'
+            stat_dir =  str(cfd.parent.absolute()) + f'/Data/Network/' + f'Statistics/{arch_type}/'
             result_path = f'{res_path}Statistics/{arch_type}/'
             results_directory = Path(f'{result_path}version_{strt_yr}{trial_num}_{norm_opt}{tropics}/')
             os.makedirs(results_directory, exist_ok=True)
             mod_name = 'Index_LSTM'
-            architecture = index_net.IndexLSTM
+            architecture = index_net.Index_LSTM
 
-
-
+    config['net_root'] = str(cfd.parent.absolute()) + f'/Data/Network/'
+    config['root'] = str(cfd.parent.absolute()) + f'/Data/Network/Sweeps/'
+    config['data_root'] = root_path
     test_loader, data_set, cls_wt, test_set, infos = load_data(config)
 
     var_comb = config['var_comb']
@@ -105,11 +105,11 @@ for arch_type in arch_types:
     exp_dir =  f"{stat_dir}version_{strt_yr}{trial_num}_{norm_opt}{tropics}/"
     pths = [xs for xs in Path(exp_dir).iterdir() if xs.is_dir()]
 
-    data_collect = np.load(f'{results_directory}/collected_loop_data_{len(pths)-1}.npz')
-    data_result = np.load(f'{results_directory}/accuracy_{len(pths)-1}model.npz')
+    data_collect = np.load(f'{results_directory}/collected_loop_data_{len(pths)}.npz')
+    data_result = np.load(f'{results_directory}/accuracy_{len(pths)}model.npz')
         
     persistance = data_collect['persistance'] 
-    olr = data_collect['olr'] 
+    olr = data_collect['sst'] 
     u10 = data_collect['u10'] 
     dates = data_collect['dates'] 
     daytimes = data_collect['daytimes']
@@ -121,7 +121,7 @@ for arch_type in arch_types:
     input_reg = []
     for input, output, weeks, days in data_set:
         if arch_type == 'Index_LSTM':
-            input_reg.append(input[1][None,:,-4:].numpy().squeeze())
+            input_reg.append(input[1][None,:,-4:].numpy().squeeze().astype('int'))
         else:
             input_reg.append(np.array(input[1]).squeeze())
 
@@ -165,6 +165,7 @@ for arch_type in arch_types:
     cnts_reg_in  = np.zeros((4,1))
 
 
+    input_reg = np.argmax(input_reg, axis = 2)
     for i in range(loop_probabilities.shape[0]):
         for j in range(loop_probabilities.shape[1]):
             for k in range(loop_probabilities.shape[2]):
@@ -272,7 +273,7 @@ for arch_type in arch_types:
     rmm2_anom_all_dt_mean = np.nanmean(rmm2_anom_all_dt, axis = 0)
     rmm2_anom_all_dt_std = np.nanstd(rmm2_anom_all_dt, axis = 0)
     ##1
-    index_path = str(cfd).parent.absolute() + f'/Index'
+    index_path = str(Path(cfd).parent.absolute()) + f'/Data/Index'
     mjo_index = np.load(f'{index_path}/MJO_index_1980-2023_mjo_testset.npz')
 
 
@@ -314,12 +315,12 @@ for arch_type in arch_types:
     cm_list = ['#7fbf7b','#1b7837','#762a83','#9970ab','#c2a5cf'] 
     colors = sns.color_palette("colorblind", n_colors=6)
     alphas = np.linspace(0.2,1, 6)
-    alphas_dt = np.linspace(0.2,1, rmm1_anom_all_dt_mean[r,:].shape[0])
+    alphas_dt = np.linspace(0.2,1, rmm1_anom_all_dt_mean[0,:].shape[0])
     marker_list = ['o','s','^','v','D','*']
 
     amplitude_threshold = np.nanmean(rmm1_anom_reg_mean) + np.nanstd(rmm1_anom_reg_mean) # 1 std above the mean of the anomalies
 
-    np.savez(f'{results_directory}{arch_type}mjo_teleconnections.npz', rmm1_anom_reg_mean = rmm1_anom_reg_mean, rmm2_anom_reg_mean = rmm2_anom_reg_mean,
+    np.savez(f'{results_directory}/{arch_type}mjo_teleconnections.npz', rmm1_anom_reg_mean = rmm1_anom_reg_mean, rmm2_anom_reg_mean = rmm2_anom_reg_mean,
         rmm1_anom_reg_std = rmm1_anom_reg_std, rmm2_anom_reg_std = rmm2_anom_reg_std, rmm1_anom_all_dt_mean = rmm1_anom_all_dt_mean, rmm2_anom_all_dt_mean = rmm2_anom_all_dt_mean,
         rmm1_anom_tar_dt_mean = rmm1_anom_tar_dt_mean, rmm2_anom_tar_dt_mean = rmm2_anom_tar_dt_mean, vmax = 2.5, alphas = alphas, alphas_dt = alphas_dt,
         vmax_rmm2= vmax_rmm2, vmax_rmm1 = vmax_rmm1, regimes = regimes, amplitude_threshold = amplitude_threshold, cm_list = cm_list, 

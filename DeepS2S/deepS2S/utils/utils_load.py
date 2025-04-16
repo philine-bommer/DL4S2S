@@ -7,6 +7,7 @@ from typing import Tuple
 
 from torch import utils
 import lightning.pytorch as pl
+import pdb
 
 
 # import utils 
@@ -37,6 +38,7 @@ def collect_statistics_from_model(pths: str,
     pred_classes = []
     collective_acc = []
     collective_acc_ts = []
+    pdb.set_trace()
     for num in range(1,len(pths)):
         current_dir =  exp_dir + f'run_{num}/'
         
