@@ -62,6 +62,8 @@ if __name__ == '__main__':
 
     config['root'] = config['root'] + f"{ntype}/"
     config['arch'] = ''
+    if config.get('download_path',''):
+        config['S2S_root'] = str(cfd.parent.absolute()) + f'/{config["download_path"]}/Network/'
     architecture = ViTLSTM.ViT_LSTM
     conv_params = get_params_from_best_model(config, 'ViT_LSTM')
 

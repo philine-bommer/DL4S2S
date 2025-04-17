@@ -38,12 +38,12 @@ Thumbs.db
 
 # Data files #
 ######################
-*.nc
+# *.nc
 # *.ckpt
 *.pt
 *.grib
 *.pdf
-*.png
+# *.png
 *.npz
 *.json
 

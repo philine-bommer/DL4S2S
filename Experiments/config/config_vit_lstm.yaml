@@ -5,6 +5,7 @@ strt: '1980'
 arch: 'ViT_LSTM/'
 base_dir: ''
 lr_dir: ''
+download_path: 'Data_S2S'
 version: ''
 temp_scaling: False
 enc: '_static'

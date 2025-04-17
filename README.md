@@ -3,7 +3,8 @@
 ![Version](https://img.shields.io/badge/version-0.0.1-green)
 [Python version]( https://img.shields.io/badge/python-3.10-blue) ![Python version]( https://img.shields.io/badge/lightning-2.5-blue) 
 
-#### Please note that while the code basis is complete, full reproducability updates will be made as soon as the peer review is finished
+#### Please note that while the code basis is complete, full reproducability updates will be made as soon as the peer review is finished.
+#### The dataset link will be updated in the coming weeks.
 
 ## Table of Contents
 1. [Overview](#overview)
@@ -198,26 +199,54 @@ python  Preprocessing\generate_aurora_statics.py
 ## Training Instructions
 
 If the dataset was downloaded, all training can be skipped and however if you want to make adaptations or run everything from scratch, follow the instruction below.
+Please make sure to unpack the `Data_S2S\Network.zip` before running the code. For easy access this zip includes a set of optimal hyperparameters.
 
 ### Hyperparameter Tuning
 
-To establish a new optimal set of hyperparameters 
+To establish a new optimal set of hyperparameters run the sweep as follows:
+```bash
+python Training/hyperparameter_tuning_objective.py
+```
+Please note that the gpu devices used can be specified in `config\config_hps.yaml`:
+```yaml
+loop_dev: []
+```
+with `[]` providing the list of gpu device numbers you want to use.
 
 ### Ensemble Training
-
+All results in Section 4 are reported based on an ensemble of 100 training runs of each architecture (for mean and standard deviation of both the CSI and Accuracy, as well as
+high probability prediction)
+Please note that for each network ensemble training the gpu devices used can be specified in `config\config_NETWORK.yaml`:
+```yaml
+devices: []
+```
+with `[]` providing the list of gpu device numbers you want to use. e.g. `[2,3]` for devices 2 and 3. The options for `NETWORK` are explained below.
 **Main architectures**
+To train an enbsemble of the `lstm`, `index_lstm` and `vit_lstm` (`NETWORK`) you can run the following scripts respectively:
+```bash
+python Training/statistics_NETWORK.py
+```
 
+Also note that hyperparameters are automatically set based on the hyperprameters stored in `Data_S2S\Network.zip`. To access hyperparameters tuned in your own reproduction of the experiments 
+the according config needs to be edited, e.g. `config\config_NETWORK.yaml`, to:
+```yaml
+download_path: ''
+```
 **Aurora-T**
 To train Aurora, we first generate the Aurora embeddings for the image data in a seperate step, therefore run the python scripts:
 ```bash
-python generate_aurora_embeddings.py
+python Training/generate_aurora_embeddings.py
 ```
 Once the embeddings are generated, the emsemble of Aurora-T models can be trained by running the statistics scripts:
 ```bash
-python statistics_auroraT.py
+python Training/statistics_auroraT.py
 ```
 **Logistic Regression**
-
+To generate the Logistic Rgeression ensemble the script can be run without further adjustments
+```bash
+python Training/logistic_regression.py
+```
+Please note that if all experiments were performed from scratch, the batch size can be adjusted for the logistic regression in the `config\config_vit_lstm.yaml`.
 
 ## Result Instruction
 

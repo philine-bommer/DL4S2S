@@ -64,7 +64,7 @@ if __name__ == '__main__':
     config['tropics'] = '_olr'
     config['arch'] = ''
     if config.get('download_path',''):
-        config['S2S_root'] = str(cfd.parent.absolute()) + config.get('download_path','') + f'/Network/Sweeps/ViT-LSTM/'
+        config['S2S_root'] = str(cfd.parent.absolute()) + f'/{config["download_path"]}/Network/'
     conv_params = get_params_from_best_model(config, 'ViT_LSTM')
     config['tropics'] = ''
 

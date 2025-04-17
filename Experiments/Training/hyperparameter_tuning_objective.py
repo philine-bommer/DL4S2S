@@ -37,7 +37,7 @@ def objective_vit(trial: optuna.trial.Trial,
     
     parser = ArgumentParser()
     parser.add_argument("--config", type=str, default='_hps')
-    parser.add_argument("--network", type=str, default='conv')
+    parser.add_argument("--network", type=str, default='ViT_LSTM')
     parser.add_argument("--ntrials", type=int, default=100)
     args = parser.parse_args()
 
@@ -56,7 +56,7 @@ def objective_vit(trial: optuna.trial.Trial,
     norm_opt = config.get('norm_opt','')
     name_var = config.get('tropics','')
 
-    log_dir = config['net_root'] + f'Sweeps/ViT-LSTM/Sweep_{strt_yr}{trial_num}_{norm_opt}{name_var}/'
+    log_dir = config['net_root'] + f'Sweeps/ViT_LSTM/Sweep_{strt_yr}{trial_num}_{norm_opt}{name_var}/'
 
     # Initialize optimization range.
     swa =  trial.suggest_float("SWA",1e-5, 1e-1,log=True)

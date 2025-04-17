@@ -10,6 +10,7 @@ setting_training: "fine"
 tropic_folder: 'version_1/best_model_olr'
 u_folder: 'version_0/best_model_u'
 exp_type: 'index'
+download_path: 'Data_S2S'
 transfer: 1
 devices: [0,1]
 norm_opt: 'calibrated'
