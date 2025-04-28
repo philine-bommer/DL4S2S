@@ -1,7 +1,8 @@
 # DL4S2S: Deep Learning for Seasonal-to-Seasonal Forecasting
 
 ![Version](https://img.shields.io/badge/version-0.0.1-green)
-[Python version]( https://img.shields.io/badge/python-3.10-blue) ![Python version]( https://img.shields.io/badge/lightning-2.5-blue) 
+![Python version]( https://img.shields.io/badge/python-3.10-blue) 
+![Lightning version]( https://img.shields.io/badge/lightning-2.5-blue) 
 
 #### Please note that while the code basis is complete, full reproducability updates will be made as soon as the peer review is finished.
 #### The dataset link will be updated in the coming weeks.
