@@ -203,6 +203,7 @@ class Index_LSTM(pl.LightningModule):
                  norm = True,
                  norm_bch = False,
                  clbrt = False,
+                 mode = 'run',
                  bs = 32,
                  gamma = {},
                  out_size = 4,
@@ -231,7 +232,6 @@ class Index_LSTM(pl.LightningModule):
             scale (bool, optional): True - add linear layer to upsample regimes
         """
         super(Index_LSTM, self).__init__()
-
         self.save_hyperparameters(ignore=['encoder_sst','encoder_u'])
 
         self.norm_both = norm_both
@@ -247,6 +247,11 @@ class Index_LSTM(pl.LightningModule):
         self.clbrt = clbrt
         self.bs = bs
         self.gamma = gamma
+        self.mode = mode
+        if 'encoder' in mode:
+            print('Test encoder impact with random variables')
+        elif 'regimes' in mode:
+            print('Test regime impact with random variables')
         
         if output_probabilities:
             self.output_activation = nn.Softmax(dim=2)
@@ -261,27 +266,34 @@ class Index_LSTM(pl.LightningModule):
         
         self.dropout = nn.Dropout(dropout)
 
-        
-        decoder_input_dim = ts_len
-
+        if 'pv' in self.mode:
+            decoder_input_dim = self.ts_len - 8
+        elif 'mjo' in self.mode:
+            decoder_input_dim = self.ts_len - 1
+        else:
+            decoder_input_dim = self.ts_len
 
         self.decoder_input_dim =decoder_input_dim
         self.decoder = nn.Sequential(
-                nn.LSTM(input_size=decoder_input_dim, hidden_size=decoder_hidden_dim, batch_first=True),
-                TimeDistributed(nn.Linear(decoder_hidden_dim, self.out_size), batch_first=True)
-            )
+            nn.LSTM(input_size=decoder_input_dim, hidden_size=decoder_hidden_dim, batch_first=True),
+            TimeDistributed(nn.Linear(decoder_hidden_dim, self.out_size), batch_first=True)
+        )
 
         self.MCE = MulticlassCalibrationError(out_size, n_bins=int(self.bs*0.2), norm='l1')
                 
     
     def forward(self, x_2d, x_1d):
 
-        x_enc = x_1d.reshape(x_1d.shape[0], self.out_time_lag , self.ts_len)
 
-        
-        # x = x_1d.reshape(x_1d.shape[0], -1).unsqueeze(1).repeat(1, self.out_time_lag, 1)
+        if self.mode == 'pv':
+            x_enc = x_1d[...,-5:].reshape(x_1d.shape[0], self.out_time_lag, self.decoder_input_dim)
+        elif self.mode == 'mjo':
+            x_mjo = x_1d[...,:-5]
+            x_nae = x_1d[...,-4:]
+            x_enc = torch.cat((x_mjo, x_nae), dim=-1).reshape(x_1d.shape[0], self.out_time_lag, self.decoder_input_dim)
+        else:
+            x_enc = x_1d.reshape(x_1d.shape[0], self.out_time_lag, self.decoder_input_dim)
 
-        # x_enc = x
 
         x= self.decoder(x_enc)
         x = torch.squeeze(x)
@@ -332,7 +344,7 @@ class Index_LSTM(pl.LightningModule):
         inputs, labels = batch
         logits = self.forward(inputs[0],inputs[1])
         loss = self.criterion(logits.reshape(-1, logits.shape[-1]), labels.reshape(-1))
-        acc, _, ece = self.get_accuracy(logits, labels)
+        acc, certainty, ece = self.get_accuracy(logits, labels)
         values = {'train_loss': loss, 'train_ece': ece,'train_acc': acc}
         self.log_dict(values, sync_dist=True)
 
@@ -373,7 +385,7 @@ class Index_LSTM(pl.LightningModule):
         Returns:
             The predicted logits.
         """
-        inputs, _= batch
+        inputs, labels = batch
         logits = self.forward(inputs[0],inputs[1])
         return logits
     
@@ -397,6 +409,176 @@ class Index_LSTM(pl.LightningModule):
             self.encoder_sst.freeze()
 
         return "Encoder frozen"
+    
+
+
+
+
+    #     self.save_hyperparameters(ignore=['encoder_sst','encoder_u'])
+
+    #     self.norm_both = norm_both
+    #     self.norm_bch = norm_bch
+    #     self.out_time_lag = out_time_lag
+    #     self.learning_rate = learning_rate
+    #     self.optm = optim
+    #     self.weight_decay = weight_decay
+    #     self.class_weight = cls_wgt
+    #     self.crit = criterion
+    #     self.norm = norm
+    #     self.out_size = out_size
+    #     self.clbrt = clbrt
+    #     self.bs = bs
+    #     self.gamma = gamma
+        
+    #     if output_probabilities:
+    #         self.output_activation = nn.Softmax(dim=2)
+    #     else:
+    #         self.output_activation = None
+
+    #     self.encoder_u = encoder_u
+    #     self.encoder_sst = encoder_sst
+    #     self.ts_len = ts_len
+
+    #     self.flatten = nn.Flatten()
+        
+    #     self.dropout = nn.Dropout(dropout)
+
+        
+    #     decoder_input_dim = ts_len
+
+
+    #     self.decoder_input_dim =decoder_input_dim
+    #     self.decoder = nn.Sequential(
+    #             nn.LSTM(input_size=decoder_input_dim, hidden_size=decoder_hidden_dim, batch_first=True),
+    #             TimeDistributed(nn.Linear(decoder_hidden_dim, self.out_size), batch_first=True)
+    #         )
+
+    #     self.MCE = MulticlassCalibrationError(out_size, n_bins=int(self.bs*0.2), norm='l1')
+                
+    
+    # def forward(self, x_2d, x_1d):
+
+    #     x_enc = x_1d.reshape(x_1d.shape[0], self.out_time_lag , self.ts_len)
+
+        
+    #     # x = x_1d.reshape(x_1d.shape[0], -1).unsqueeze(1).repeat(1, self.out_time_lag, 1)
+
+    #     # x_enc = x
+
+    #     x= self.decoder(x_enc)
+    #     x = torch.squeeze(x)
+    #     if self.output_activation:
+    #         x = self.output_activation(x)
+    #     return x
+
+    # def configure_optimizers(self):
+
+    #     optimizer = self.optm(self.parameters(), lr = self.learning_rate, weight_decay = self.weight_decay)
+    #     self.optimizer = optimizer
+    #     return optimizer 
+    
+    # def configure_loss(self):
+    #     """_summary_
+
+    #     Args:
+    #         clbrt (bool, optional): enable/ disable calibration using Focal Loss 
+    #         with adaptive gamma. Defaults to False.
+    #         Reference:
+    #         [1]  T.-Y. Lin, P. Goyal, R. Girshick, K. He, and P. Dollar, Focal loss for dense object detection.
+    #             arXiv preprint arXiv:1708.02002, 2017.
+
+    #     Returns:
+    #         _type_: loss criterion
+    #     """
+    #     if self.clbrt:
+    #         criterion = self.crit
+    #     else:
+    #         criterion = self.crit(weight=torch.Tensor(self.class_weight))
+    #     self.criterion = criterion
+    #     return criterion 
+
+
+    # def training_step(self,
+    #       batch,
+    #       batch_idx):
+    #     """ Training a given model on the provided training data.
+
+    #     Args:
+    #         model (torch.nn.Module): Model architecture to train
+    #         training_data_loader (torch.DatasetLoader): A dataset loader that contains all training data.
+    #         criterion (torch.nn.loss): Loss funtion
+    #         optimizer (torch.optim): Optimizer
+    #         epochs (int): Number of epochs. If None run until model does not improve for 3 epochs.
+    #         print_freq (int): Number of batches after which a print is made.
+    #     """
+    #     inputs, labels = batch
+    #     logits = self.forward(inputs[0],inputs[1])
+    #     loss = self.criterion(logits.reshape(-1, logits.shape[-1]), labels.reshape(-1))
+    #     acc, _, ece = self.get_accuracy(logits, labels)
+    #     values = {'train_loss': loss, 'train_ece': ece,'train_acc': acc}
+    #     self.log_dict(values, sync_dist=True)
+
+
+    #     return loss
+    
+    
+    # def validation_step(self, batch, batch_idx):
+
+    #     inputs, labels = batch 
+    #     logits = self.forward(inputs[0],inputs[1])
+    #     loss = self.criterion(logits.reshape(-1, logits.shape[-1]), labels.reshape(-1))
+    #     acc, certainty, ece = self.get_accuracy(logits, labels)
+    #     values = {"val_loss": loss,"val_ece": ece, "val_acc": acc, "val_certainty": certainty}  # add more items if needed
+    #     self.log_dict(values, sync_dist=True)
+    
+    #     return {"val_loss": loss, "val_accuracy": acc}
+    
+    # def test_step(self, batch, batch_idx):
+
+    #     inputs, labels = batch 
+    #     logits = self.forward(inputs[0],inputs[1])
+    #     acc, certainty, ece = self.get_accuracy(logits, labels)
+    #     values = {"test_ece": ece, "test_acc": acc, "test_certainty": certainty}  # add more items if needed
+    #     self.log_dict(values, sync_dist=True)
+
+    #     return {"test_acc": acc, "test_certainty": certainty, "test_ece": ece}
+    
+    # def predict_step(self, batch, batch_idx, dataloader_idx=0):
+    #     """
+    #     Perform a forward pass on the model to generate predictions.
+
+    #     Args:
+    #         batch: A tuple containing the inputs and labels.
+    #         batch_idx: The index of the current batch.
+    #         dataloader_idx: The index of the current dataloader.
+
+    #     Returns:
+    #         The predicted logits.
+    #     """
+    #     inputs, _= batch
+    #     logits = self.forward(inputs[0],inputs[1])
+    #     return logits
+    
+    # def get_accuracy(self, logits, y):
+    #     predictions = logits.detach().cpu().numpy()
+    #     labels = y.detach().cpu().numpy()
+    #     certainty = np.mean(np.max(predictions, axis=-1))
+    #     class_predictions = np.argmax(predictions, axis=-1)
+    #     accuracy = balanced_accuracy_score(labels.flatten().astype(int), class_predictions.flatten().astype(int))
+    #     ece = self.MCE(logits.detach().cpu().reshape(-1, predictions.shape[-1]), y.detach().cpu().flatten()) 
+         
+    #     return float(accuracy), float(certainty), float(ece)
+    
+    # def freeze_encoder(self):
+    #     if self.encoder_u is None:
+    #         self.encoder_sst.freeze()
+    #     elif self.encoder_sst is None:
+    #         self.encoder_u.freeze()
+    #     else:
+    #         self.encoder_u.freeze()
+    #         self.encoder_sst.freeze()
+
+    #     return "Encoder frozen"
 
 
 

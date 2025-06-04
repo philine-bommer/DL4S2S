@@ -243,6 +243,10 @@ class ViT_LSTM(pl.LightningModule):
 
         if 'base' in self.mode:
             decoder_input_dim = in_time_lag * out_dim
+        elif 'sst' in self.mode:
+            decoder_input_dim = prod(encoder_out_dim) + out_dim
+        elif 'pv' in self.mode:
+            decoder_input_dim = prod(encoder_out_dim) + out_dim
         else:
             decoder_input_dim = 2*prod(encoder_out_dim) + out_dim
         
@@ -285,7 +289,12 @@ class ViT_LSTM(pl.LightningModule):
 
         x_enc_s, x_enc_u = self.encode_images(x_2d)
    
-        x = torch.cat((x_enc_s, x_enc_u), dim=2)
+        if 'sst' in self.mode:
+            x = x_enc_s
+        elif 'pv' in self.mode:
+            x = x_enc_u
+        else:
+            x = torch.cat((x_enc_s, x_enc_u), dim=2)
         
         if self.norm: 
             # Min-Max norm  (x-x.min())/(x.max()-x.min()) 

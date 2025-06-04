@@ -1,0 +1,59 @@
+root: ''
+net_root: ''
+data_root: ''
+strt: '1980'
+arch: 'ViT_LSTM/'
+base_dir: ''
+lr_dir: ''
+download_path: 'Data_S2S'
+version: ''
+temp_scaling: False
+enc: '_static'
+tropics: '_olr'
+tropic_folder: 'version_1/best_model_olr'
+u_folder: 'version_0/best_model_u'
+transfer: 0
+devices: 1
+norm_opt: 'calibrated'
+var_comb: {'input': ['olr', 'u', 'nae_regimes'], 'output': ['nae_regimes']}
+name: 'fine'
+percent_valid: 0.35
+epochs: 200 
+setting_training: 'fine'
+data:
+  regime_path: ''
+  pressure: 10
+  nae: 500
+  resolution: 1.40625
+  test_set_name: 'ERA5'
+  pre:
+    setname: '20CRv3'
+    test_start: 138
+    test_end: 145
+    train_start: 0 
+    train_end: 131
+    val_start: 131
+    val_end: 138
+  fine:
+    setname: 'ERA5'
+    test_start: 33
+    test_end: 43
+    train_start: 0 
+    train_end: 28
+    val_start: 28
+    val_end: 33
+  n_steps_in: 6
+  lag: 0
+  n_steps_out: 6
+  m_days: 7
+  dataset_name1: '20CRv3'
+  dataset_name2: 'ERA5'
+  bs: 36
+network:
+  mode: 'pv'
+  kernelsize: 3
+  maxpool: 2
+  norm_both: True
+  epochs: 200
+  clbrt: True
+logistic: 'version_1980'

@@ -681,3 +681,36 @@ def classwise_acc(model, test_set, test_loader, trainer):
             acc[t,i] = bacc
 
     return acc
+
+def classwise_CSI(pred_classes, targets):
+    n_classes = int(np.max(targets) + 1)
+    preds = np.eye(n_classes)[pred_classes.astype(int)]
+
+    tars = np.eye(n_classes)[targets.astype(int)]
+    csi_cw = np.zeros((targets.shape[1],n_classes))
+    for i in range(n_classes):
+        pred = preds[:,:,i]
+        target = tars[:,:,i]
+        for j in range(target.shape[1]):
+            tp = pred[target[:,j].astype(bool),j].sum()
+            fn = target[:,j].sum() - tp
+            
+            fp = pred[:,j].sum() - tp 
+            csi_cw[j,i] = (tp/(tp + fn +fp))#/target[:,j].sum()
+    return csi_cw
+
+def classwise_ACC(pred_classes, targets):
+    ts = targets.shape[1]
+    n_classes = pred_classes.max() + 1
+
+    acc_cw = np.zeros((ts,n_classes))
+    for t in range(ts): 
+        pdc = pred_classes[:,t]
+        tgt = targets[:,t]
+        tgs = np.eye(n_classes)[tgt]
+        pds = np.eye(n_classes)[pdc]
+        for i in range(n_classes):
+
+            occ_correct = (tgs[:,i].flatten().astype(int) == pds[:,i].flatten().astype(int))* tgs[:,i].astype(int)
+            acc_cw[t,i] = occ_correct.sum()/tgs[:,i].sum()
+    return acc_cw

@@ -327,7 +327,11 @@ def load_multi_model(config, current_dir, name, **params):
     dir = current_dir
    
     log_dir = dir + 'lightning_logs/'
-    hp_dir = Path(log_dir + 'version_1')
+    hp_dirs = [xs for xs in Path(log_dir).iterdir() if xs.is_dir()]
+    if len(hp_dirs)== 1:
+        hp_dir = Path(hp_dirs[0])
+    else: 
+        hp_dir = Path(log_dir + 'version_1')
     cf_dir = hp_dir
 
     
